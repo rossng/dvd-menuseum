@@ -1,0 +1,6 @@
+fixtures/discs/
+.ref/
+target/
+web/pkg/
+__pycache__/
+.DS_Store

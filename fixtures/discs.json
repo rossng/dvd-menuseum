@@ -1,0 +1,62 @@
+{
+  "_comment": "Freely licensed DVD-Video images on archive.org. Fetched into fixtures/discs/<slug>/ by scripts/fetch_discs.py (gitignored).",
+  "discs": [
+    {
+      "slug": "elephants-dream-pal",
+      "title": "Elephants Dream (2006 official DVD, disc 1)",
+      "system": "PAL",
+      "archive_id": "elephans-dream-iso",
+      "image": "Elephans Dream Disk 1 PAL.ISO",
+      "license": "Film CC BY 2.5 (Orange Open Movie Project); upload carries no licence tag",
+      "notes": "9 VTSs; VTS_01_0.VOB is a ~180 MB motion menu"
+    },
+    {
+      "slug": "elephants-dream-ntsc",
+      "title": "Elephants Dream (2006 official DVD, disc 2)",
+      "system": "NTSC",
+      "archive_id": "elephans-dream-iso",
+      "image": "Elephans Dream Disk 2 NTSC.ISO",
+      "license": "Film CC BY 2.5 (Orange Open Movie Project); upload carries no licence tag",
+      "notes": "8 VTSs; NTSC counterpart of disc 1"
+    },
+    {
+      "slug": "nina-vision",
+      "title": "Nina Vision (DVD ISO with Menus)",
+      "system": "NTSC",
+      "archive_id": "NinaVisionDVD",
+      "image": "NINAVISION-dvd-image-fixed20110908.iso",
+      "license": "CC BY-SA 3.0",
+      "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "notes": "Hand-authored by Terry Hancock; 125 MB looping VMGM motion menu"
+    },
+    {
+      "slug": "av-calibration-pal",
+      "title": "AV calibration PAL DVD (beta 1)",
+      "system": "PAL",
+      "archive_id": "AvCalibrationPalDvd",
+      "image": "Calibration_DVD_beta1_PAL1.iso",
+      "license": "CC BY-NC-SA 3.0",
+      "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+      "notes": "No VIDEO_TS.VOB (VMGM has no menu VOBs); menus live in VTS_01_0"
+    },
+    {
+      "slug": "av-calibration-ntsc",
+      "title": "AV calibration NTSC DVD (beta 1)",
+      "system": "NTSC",
+      "archive_id": "AvCalibrationNtscDvd",
+      "image": "Calibration_DVD_beta1_NTSC1.iso",
+      "license": "CC BY-NC-SA 3.0",
+      "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+      "notes": "NTSC counterpart"
+    },
+    {
+      "slug": "sita-sings-the-blues-pal",
+      "title": "Sita Sings the Blues PAL DVD Image",
+      "system": "PAL",
+      "archive_id": "SitaSingsTheBluesPalDvdImage",
+      "image": "SITA_PAL_DVD.img",
+      "license": "Film CC BY-SA 3.0 (later CC0); upload carries no licence tag",
+      "notes": ".img not browsable on archive.org; fetched via HTTP range reads of the ISO 9660 filesystem"
+    }
+  ]
+}
