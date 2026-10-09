@@ -10,5 +10,6 @@ trait in `menuseum-core` so that nothing else needs it.
 |---|---|---|
 | everything not listed below | BlueOak-1.0.0 | |
 | `crates/engine/` | GPL-2.0-or-later | follows libdvdnav's `vm.c`, `play.c`, `getset.c`, `vmget.c`, `dvdnav.c`, `highlight.c` and `searching.c` |
+| `vendor/oxideav-mpeg12video/` | MIT | third-party, with local changes ([its LICENSE](vendor/oxideav-mpeg12video/LICENSE)) |
 
 `menuseum-core` doesn't depend on the engine.
