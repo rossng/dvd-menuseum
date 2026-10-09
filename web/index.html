@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menuseum harness</title>
+<style>
+  :root { color-scheme: dark; --fg: #ddd; --muted: #888; --bg: #111; --panel: #1b1b1b; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  #layout { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  #screen { position: relative; width: min(960px, 100%); aspect-ratio: 4 / 3; background: #000; cursor: pointer; }
+  #screen.wide { aspect-ratio: 16 / 9; }
+  #screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #placeholder { position: absolute; inset: 0; display: none; place-items: center; text-align: center; white-space: pre-line; color: var(--muted); background: #000; }
+  #start { position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px; background: #000c; }
+  #side { flex: 1 1 320px; min-width: 0; }
+  #side section { background: var(--panel); padding: 8px; margin-bottom: 8px; overflow-wrap: anywhere; }
+  #log { height: 220px; overflow: auto; white-space: pre; color: var(--muted); }
+  kbd { border: 1px solid #444; padding: 0 3px; }
+  label { display: inline-flex; gap: 4px; margin-right: 12px; }
+</style>
+</head>
+<body>
+<div id="layout">
+  <div id="screen">
+    <canvas id="video"></canvas>
+    <canvas id="overlay"></canvas>
+    <div id="placeholder"></div>
+    <div id="start">Loading…</div>
+  </div>
+  <div id="side">
+    <section>
+      <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> activate · <kbd>Esc</kbd> escape/resume ·
+      <kbd>T</kbd> title menu · <kbd>R</kbd> root menu · <kbd>C</kbd> chapter menu · mouse hover/click
+      <div style="margin-top:6px">
+        <label><input type="checkbox" id="rects"> button rects</label>
+        <label><input type="checkbox" id="compat"> libdvdnav quirks</label>
+      </div>
+    </section>
+    <section id="state"></section>
+    <section id="stats"></section>
+    <section id="log"></section>
+  </div>
+</div>
+<script type="module">
+// Presentation only: the player runs in player-worker.js. Frames, audio,
+// subpictures and button info arrive placed on a timeline (ms); the audio
+// clock maps the timeline to wall time, freezing it during stills and
+// stalls.
+const params = new URLSearchParams(location.search);
+const bundle = params.get("bundle");
+const $ = (id) => document.getElementById(id);
+const video = $("video"), vctx = video.getContext("2d");
+const overlay = $("overlay"), octx = overlay.getContext("2d");
+const log = (msg) => {
+  $("log").textContent += msg + "\n";
+  $("log").scrollTop = $("log").scrollHeight;
+};
+if (!bundle) {
+  $("start").textContent = "Add ?bundle=<url of a bundle directory>";
+  throw new Error("no bundle");
+}
+
+const worker = new Worker("player-worker.js");
+const actx = new AudioContext();
+
+let epoch = 0;
+let frames = [], audio = [], spus = [], buttonSets = [], stills = [], placeholders = [];
+let state = null, liveButton = 0, stopped = false;
+let base = null;        // AudioContext time (s) at which the timeline was at 0
+let frozenAt = null;    // timeline ms while the clock is held
+let holding = null;     // why: "still" or "stall"
+let stillTimer = null;
+let lastFrame = null;   // {at, duration}
+let sources = [];       // scheduled audio: {node, epoch}
+let shown = 0, dropped = 0, stalls = 0, lastPresentedPost = 0;
+
+const now = () => (frozenAt !== null ? frozenAt : (actx.currentTime - base) * 1000);
+function freeze(at, why) {
+  if (frozenAt === null) [frozenAt, holding] = [at, why];
+}
+function unfreeze() {
+  if (frozenAt !== null) {
+    base = actx.currentTime - frozenAt / 1000;
+    [frozenAt, holding] = [null, null];
+  }
+  clearTimeout(stillTimer);
+  stillTimer = null;
+}
+
+function insertSorted(list, item) {
+  let i = list.length;
+  while (i > 0 && list[i - 1].at > item.at) i--;
+  list.splice(i, 0, item);
+}
+
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.epoch !== undefined && m.epoch < epoch) return;
+  switch (m.type) {
+    case "ready":
+      $("start").textContent = `Click to start (${m.provider || "untitled disc"})`;
+      break;
+    case "frame":
+      insertSorted(frames, m);
+      break;
+    case "audio":
+      insertSorted(audio, m);
+      break;
+    case "subpicture":
+      insertSorted(spus, m);
+      break;
+    case "buttons":
+      insertSorted(buttonSets, m);
+      break;
+    case "still":
+      insertSorted(stills, m);
+      break;
+    case "placeholder":
+      insertSorted(placeholders, m);
+      log(`stripped: title ${m.title}, chapter ${m.chapter}`);
+      break;
+    case "flush":
+      epoch = m.epoch;
+      frames = frames.filter((f) => f.epoch >= epoch);
+      audio = audio.filter((a) => a.epoch >= epoch);
+      spus = spus.filter((s) => s.epoch >= epoch);
+      buttonSets = buttonSets.filter((b) => b.epoch >= epoch);
+      stills = [];
+      placeholders = placeholders.filter((p) => p.epoch >= epoch);
+      for (const s of sources) if (s.epoch < epoch) s.node.stop();
+      sources = sources.filter((s) => s.epoch >= epoch);
+      if (base !== null) unfreeze();
+      break;
+    case "state":
+      state = m;
+      liveButton = m.button;
+      $("screen").classList.toggle("wide", m.widescreen);
+      showState();
+      break;
+    case "stopped":
+      stopped = true;
+      log("stopped");
+      break;
+    case "error":
+      log(`error: ${m.message}`);
+      break;
+    case "log":
+      log(m.message);
+      break;
+  }
+};
+
+function showState() {
+  const st = state;
+  if (!st) return;
+  const dom = { 1: "FP", 2: "TT", 4: "VMGM", 8: "VTSM" }[st.domain];
+  const hex = (a) => a.map((v) => v.toString(16).padStart(4, "0")).join(" ");
+  $("state").innerHTML =
+    `domain ${dom} · vts ${st.vts} · pgc ${st.pgc} · pg ${st.pg} · cell ${st.cell} · button ${st.button}<br>` +
+    `SPRM ${hex(st.sprm)}<br>GPRM ${hex(st.gprm)}`;
+}
+
+// ---- overlay ----
+
+let drawn = null;
+function drawOverlay(t) {
+  const spu = [...spus].reverse().find((s) => s.at <= t && (s.until === null || s.until > t)) ?? null;
+  const set = [...buttonSets].reverse().find((b) => b.at <= t) ?? null;
+  // Forget subpictures and button sets superseded long ago.
+  if (spus.length > 16) spus = spus.slice(-16);
+  if (buttonSets.length > 16) buttonSets = buttonSets.slice(-16);
+  const rects = $("rects").checked;
+  const key = [spu, set, liveButton, rects];
+  if (drawn && key.every((k, i) => k === drawn[i])) return;
+  drawn = key;
+  const w = state?.width ?? 720, h = state?.height ?? 576;
+  if (overlay.width !== w || overlay.height !== h) [overlay.width, overlay.height] = [w, h];
+  octx.clearRect(0, 0, w, h);
+  const buttons = set?.buttons ?? [];
+  if (spu) {
+    const px = new Uint8Array(spu.data);
+    const img = octx.createImageData(spu.width, spu.height);
+    const sel = buttons[liveButton - 1];
+    const hl = sel?.selected;
+    for (let row = 0; row < spu.height; row++) {
+      const y = spu.y + row;
+      const inRow = hl && y >= sel.y0 && y <= sel.y1;
+      for (let col = 0; col < spu.width; col++) {
+        const v = px[row * spu.width + col];
+        const x = spu.x + col;
+        let ci = spu.color[v], alpha = spu.contrast[v];
+        if (inRow && x >= sel.x0 && x <= sel.x1) [ci, alpha] = [hl.color[v], hl.contrast[v]];
+        const c = spu.palette[ci & 15], o = (row * spu.width + col) * 4;
+        img.data[o] = c[0];
+        img.data[o + 1] = c[1];
+        img.data[o + 2] = c[2];
+        img.data[o + 3] = alpha * 17;
+      }
+    }
+    octx.putImageData(img, spu.x, spu.y);
+  }
+  if (rects) {
+    buttons.forEach((b, i) => {
+      octx.strokeStyle = i + 1 === liveButton ? "#ff0" : "#0f0";
+      octx.strokeRect(b.x0 + 0.5, b.y0 + 0.5, b.x1 - b.x0, b.y1 - b.y0);
+      octx.fillStyle = octx.strokeStyle;
+      octx.fillText(String(i + 1), b.x0 + 3, b.y0 + 11);
+    });
+  }
+}
+
+// ---- main loop ----
+
+function frame() {
+  requestAnimationFrame(frame);
+  if (base === null) {
+    // Prebuffer before starting the clock.
+    const first = frames[0] ?? placeholders[0] ?? stills[0];
+    if (!first || (frames.length < 8 && !placeholders.length && !stills.length && !stopped)) return;
+    base = actx.currentTime - first.at / 1000 + 0.05;
+  }
+  const t = now();
+  if (performance.now() - lastPresentedPost > 30) {
+    worker.postMessage({ type: "presented", t });
+    lastPresentedPost = performance.now();
+  }
+
+  // Stills hold the clock at their position.
+  const still = stills[0];
+  if (still && still.at <= t && frozenAt === null) {
+    stills.shift();
+    freeze(still.at, "still");
+    log(`still ${still.seconds === 255 ? "∞" : still.seconds + "s"}`);
+    if (still.seconds !== 255) {
+      stillTimer = setTimeout(() => {
+        unfreeze();
+        worker.postMessage({ type: "still_done", epoch: still.epoch });
+      }, still.seconds * 1000);
+    }
+  }
+
+  // Video: show the newest frame that is due.
+  let img = null;
+  while (frames.length && frames[0].at <= t) {
+    if (img) dropped++;
+    img = frames.shift();
+  }
+  if (img) {
+    const { width, height } = img;
+    if (video.width !== width || video.height !== height) [video.width, video.height] = [width, height];
+    vctx.putImageData(new ImageData(new Uint8ClampedArray(img.data), width, height), 0, 0);
+    lastFrame = img;
+    shown++;
+  }
+
+  // Placeholders for stripped cells.
+  const ph = placeholders.find((p) => p.at <= t && t < p.at + p.duration);
+  $("placeholder").style.display = ph ? "grid" : "none";
+  if (ph) $("placeholder").textContent = `Title ${ph.title}, chapter ${ph.chapter}\n(not included in this archive)`;
+  placeholders = placeholders.filter((p) => t < p.at + p.duration);
+
+  // Stall: out of frames mid-playback (not in a still or placeholder) — hold
+  // the clock until more arrive.
+  if (frozenAt === null && !frames.length && !ph && !stopped && lastFrame && t > lastFrame.at + lastFrame.duration + 100) {
+    freeze(t, "stall");
+    stalls++;
+  } else if (holding === "stall" && frames.length) {
+    unfreeze();
+  }
+
+  // Audio: schedule chunks shortly before they are due.
+  if (frozenAt === null) {
+    while (audio.length && audio[0].at <= t + 250) {
+      const a = audio.shift();
+      const when = base + a.at / 1000;
+      if (when < actx.currentTime - 0.02) continue; // too late
+      const pcm = new Float32Array(a.data);
+      const buf = actx.createBuffer(2, a.frames, a.rate);
+      const l = buf.getChannelData(0), r = buf.getChannelData(1);
+      for (let i = 0; i < a.frames; i++) {
+        l[i] = pcm[2 * i];
+        r[i] = pcm[2 * i + 1];
+      }
+      const node = actx.createBufferSource();
+      node.buffer = buf;
+      node.connect(actx.destination);
+      node.start(Math.max(when, actx.currentTime));
+      sources.push({ node, epoch: a.epoch });
+      node.onended = () => (sources = sources.filter((s) => s.node !== node));
+    }
+  }
+
+  drawOverlay(t);
+  $("stats").textContent =
+    `t ${(t / 1000).toFixed(2)}s${holding ? ` (${holding})` : ""} · frames shown ${shown}, dropped ${dropped}, buffered ${frames.length} · stalls ${stalls}`;
+}
+
+// ---- input ----
+
+const input = (kind, a, b) => worker.postMessage({ type: "input", kind, a, b });
+const KEYS = {
+  ArrowUp: () => input("up"), ArrowDown: () => input("down"), ArrowLeft: () => input("left"),
+  ArrowRight: () => input("right"), Enter: () => input("activate"), Escape: () => input("menu", "escape"),
+  t: () => input("menu", "title"), r: () => input("menu", "root"), c: () => input("menu", "part"),
+};
+addEventListener("keydown", (e) => {
+  const f = KEYS[e.key];
+  if (f) {
+    f();
+    e.preventDefault();
+  }
+});
+function pictureCoords(e) {
+  const r = overlay.getBoundingClientRect();
+  return [Math.round(((e.clientX - r.left) / r.width) * overlay.width), Math.round(((e.clientY - r.top) / r.height) * overlay.height)];
+}
+overlay.addEventListener("mousemove", (e) => input("pointer", ...pictureCoords(e)));
+overlay.addEventListener("click", (e) => input("click", ...pictureCoords(e)));
+$("rects").addEventListener("change", () => (drawn = null));
+
+$("compat").checked = params.get("compat") === "1";
+$("compat").disabled = true; // fixed for the session: reload with ?compat=1 to change
+worker.postMessage({
+  type: "open",
+  bundle: bundle.endsWith("/") ? bundle : bundle + "/",
+  seed: Number(params.get("seed") ?? 0),
+  compat: params.get("compat") === "1",
+});
+$("start").addEventListener("click", () => {
+  $("start").remove();
+  actx.resume();
+  requestAnimationFrame(frame);
+}, { once: true });
+</script>
+</body>
+</html>

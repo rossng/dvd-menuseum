@@ -63,6 +63,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "menuseum-wasm"
+version = "0.1.0"
+dependencies = [
+ "menuseum-core",
+ "menuseum-engine",
+ "menuseum-media",
+]
+
+[[package]]
 name = "oxideav-ac3"
 version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"

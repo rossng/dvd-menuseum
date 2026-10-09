@@ -1,0 +1,15 @@
+[package]
+name = "menuseum-wasm"
+version = "0.1.0"
+edition.workspace = true
+# Links menuseum-engine (GPL-2.0-or-later); see LICENSING.md.
+license = "GPL-2.0-or-later"
+description = "The menu player for the browser, as a plain C ABI WebAssembly module."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+menuseum-core = { path = "../core" }
+menuseum-engine = { path = "../engine" }
+menuseum-media = { path = "../media" }
