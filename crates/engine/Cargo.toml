@@ -1,0 +1,10 @@
+[package]
+name = "menuseum-engine"
+version = "0.1.0"
+edition.workspace = true
+# Derived from libdvdnav (GPL-2.0-or-later); see LICENSING.md.
+license = "GPL-2.0-or-later"
+description = "DVD-Video navigation engine following libdvdnav, behind the menuseum-core Navigator interface."
+
+[dependencies]
+menuseum-core = { path = "../core" }
