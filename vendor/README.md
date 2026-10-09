@@ -8,7 +8,9 @@ From crates.io (MIT, https://github.com/OxideAV/oxideav-mpeg12video). Local chan
   whole buffered elementary stream (`decode_video_sequence`) and aborts on the first
   picture that fails to decode. `StreamDecoder` takes bytes as they arrive, decodes
   each picture once the start code that ends it is in, emits frames in display order
-  as soon as the reorder allows, and skips (counts) pictures that fail.
+  as soon as the reorder allows, and skips (counts) pictures that fail. Each push
+  carries a tag, and every frame comes out with the tag of the push holding its
+  picture, so callers can time frames by the access unit they came from.
 - `examples/stream_decode.rs`: decodes an elementary stream through `StreamDecoder`
   in 2 KB chunks, for comparison against `decode_to_yuv` and ffmpeg.
 

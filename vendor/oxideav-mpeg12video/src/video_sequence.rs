@@ -1742,18 +1742,28 @@ mod tests {
 /// Menuseum): elementary-stream bytes are pushed as they arrive and frames
 /// come out in display order as soon as the reorder allows.
 ///
+/// Each push carries a caller-chosen tag; every frame comes out with the
+/// tag of the push that held its picture start code (the first field's, for
+/// a field pair), so a caller can tell which access unit a frame came from
+/// despite the B-frame reorder.
+///
 /// A picture is decoded once the start code that ends it has arrived. A
-/// picture that fails to decode is skipped (logged in [`Self::errors`])
+/// picture that fails to decode is skipped (counted in [`Self::errors`])
 /// instead of aborting the stream.
 #[derive(Default)]
 pub struct StreamDecoder {
     buf: Vec<u8>,
+    /// (offset in `buf` where a push began, its tag), oldest first.
+    tags: Vec<(usize, u64)>,
     geometry: Option<SequenceGeometry>,
     matrices: QuantiserMatrixState,
-    reorder: ReorderBuffer,
+    /// The held-back I/P anchor and its tag (§6.1.1.11 reorder).
+    held: Option<(DecodedFrame, u64)>,
     forward_anchor: Option<FrameBuffer>,
     backward_anchor: Option<FrameBuffer>,
     pending_field: Option<PendingField>,
+    /// Tag of the first field of a pending field pair.
+    pending_field_tag: u64,
     /// Number of pictures skipped because they failed to decode.
     pub errors: u32,
 }
@@ -1773,14 +1783,19 @@ impl StreamDecoder {
         Self::default()
     }
 
-    /// Forget all state, e.g. before decoding from a new position.
+    /// Forget all state, e.g. before decoding from an unrelated position.
     pub fn reset(&mut self) {
         *self = Self::default();
     }
 
+    fn tag_at(&self, offset: usize) -> u64 {
+        self.tags.iter().rev().find(|(o, _)| *o <= offset).map_or(0, |(_, t)| *t)
+    }
+
     /// Append elementary-stream bytes and decode every picture that is now
-    /// complete. Displayable frames are appended to `out`.
-    pub fn push(&mut self, data: &[u8], out: &mut Vec<DecodedFrame>) {
+    /// complete. Displayable frames, with their tags, are appended to `out`.
+    pub fn push(&mut self, data: &[u8], tag: u64, out: &mut Vec<(DecodedFrame, u64)>) {
+        self.tags.push((self.buf.len(), tag));
         self.buf.extend_from_slice(data);
         let mut offset = 0usize;
         while let Some(rel) = find_picture_or_sequence_start_code(&self.buf[offset..]) {
@@ -1793,38 +1808,55 @@ impl StreamDecoder {
             let next_offset = code_start + boundary;
             let unit_end = (next_offset + 4).min(self.buf.len());
             let unit = self.buf[code_start..unit_end].to_vec();
-            if is_start_code(&unit, SEQUENCE_HEADER_CODE) {
-                match sequence_geometry_at(&unit) {
-                    Ok(g) => {
-                        self.matrices = g.initial_matrices();
-                        self.geometry = Some(g);
-                    }
-                    Err(_) => self.errors += 1,
-                }
-            } else if self.geometry.is_some() {
-                if self.decode_picture(&unit, out).is_err() {
-                    self.errors += 1;
-                }
-            }
+            let unit_tag = self.tag_at(code_start);
+            self.decode_unit(&unit, unit_tag, out);
             offset = next_offset;
         }
-        self.buf.drain(..offset.min(self.buf.len()));
+        self.consume(offset);
+    }
+
+    /// Drop the first `n` buffered bytes, keeping tag offsets in step.
+    fn consume(&mut self, n: usize) {
+        let n = n.min(self.buf.len());
+        self.buf.drain(..n);
+        let keep = self.tags.iter().rposition(|(o, _)| *o <= n).unwrap_or(0);
+        self.tags.drain(..keep);
+        for t in &mut self.tags {
+            t.0 = t.0.saturating_sub(n);
+        }
     }
 
     /// End of stream: decode what is left and release the held anchor.
-    pub fn flush(&mut self, out: &mut Vec<DecodedFrame>) {
+    pub fn flush(&mut self, out: &mut Vec<(DecodedFrame, u64)>) {
         if let Some(rel) = find_picture_or_sequence_start_code(&self.buf) {
             let unit = self.buf[rel..].to_vec();
-            if !is_start_code(&unit, SEQUENCE_HEADER_CODE) && self.geometry.is_some() && self.decode_picture(&unit, out).is_err() {
-                self.errors += 1;
-            }
+            let tag = self.tag_at(rel);
+            self.decode_unit(&unit, tag, out);
         }
         self.buf.clear();
-        self.reorder.flush(out);
+        self.tags.clear();
+        if let Some(held) = self.held.take() {
+            out.push(held);
+        }
     }
 
-    fn decode_picture(&mut self, picture_region: &[u8], out: &mut Vec<DecodedFrame>) -> Result<()> {
+    fn decode_unit(&mut self, unit: &[u8], tag: u64, out: &mut Vec<(DecodedFrame, u64)>) {
+        if is_start_code(unit, SEQUENCE_HEADER_CODE) {
+            match sequence_geometry_at(unit) {
+                Ok(g) => {
+                    self.matrices = g.initial_matrices();
+                    self.geometry = Some(g);
+                }
+                Err(_) => self.errors += 1,
+            }
+        } else if self.geometry.is_some() && self.decode_picture(unit, tag, out).is_err() {
+            self.errors += 1;
+        }
+    }
+
+    fn decode_picture(&mut self, picture_region: &[u8], tag: u64, out: &mut Vec<(DecodedFrame, u64)>) -> Result<()> {
         let geometry = self.geometry.expect("checked by caller");
+        let mut tag = tag;
         let coded = match geometry {
             SequenceGeometry::Mpeg1(mpeg1_params) => {
                 let header = Mpeg2PictureHeader::parse(picture_region)?;
@@ -1840,6 +1872,7 @@ impl StreamDecoder {
                 let (header, ext) = Mpeg2PictureHeader::parse_with_extension(picture_region)?;
                 apply_quant_matrix_extensions(picture_region, mpeg2_geometry.chroma_format, &mut self.matrices)?;
                 if ext.picture_structure != PictureStructure::Frame {
+                    let first = self.pending_field.is_none();
                     match reconstruct_field_pair(
                         picture_region,
                         &header,
@@ -1850,8 +1883,16 @@ impl StreamDecoder {
                         &mut self.pending_field,
                         &self.matrices,
                     )? {
-                        None => return Ok(()),
-                        Some(frame) => frame,
+                        None => {
+                            if first {
+                                self.pending_field_tag = tag;
+                            }
+                            return Ok(());
+                        }
+                        Some(frame) => {
+                            tag = self.pending_field_tag;
+                            frame
+                        }
                     }
                 } else {
                     reconstruct_picture(
@@ -1867,11 +1908,12 @@ impl StreamDecoder {
             }
         };
         match coded.picture_coding_type {
-            PictureCodingType::Bidirectional => self.reorder.push_b(coded, out),
-            PictureCodingType::DcIntra => out.push(coded),
+            PictureCodingType::Bidirectional | PictureCodingType::DcIntra => out.push((coded, tag)),
             PictureCodingType::Intra | PictureCodingType::Predictive => {
                 let frame = coded.frame.clone();
-                self.reorder.push_anchor(coded, out);
+                if let Some(prev) = self.held.replace((coded, tag)) {
+                    out.push(prev);
+                }
                 self.forward_anchor = self.backward_anchor.take();
                 self.backward_anchor = Some(frame);
             }

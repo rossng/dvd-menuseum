@@ -40,6 +40,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "menuseum-media"
+version = "0.1.0"
+dependencies = [
+ "menuseum-core",
+ "menuseum-engine",
+ "menuseum-lpcm",
+ "oxideav-ac3",
+ "oxideav-core",
+ "oxideav-dts",
+ "oxideav-mp2",
+ "oxideav-mpeg12video",
+]
+
+[[package]]
+name = "oxideav-ac3"
+version = "0.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efb5f931133bf47e30ed9d809ae1cc6b2c95f5643a73b39fc75fffc0329184be"
+dependencies = [
+ "oxideav-core",
+]
+
+[[package]]
 name = "oxideav-core"
 version = "0.1.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -48,6 +71,31 @@ dependencies = [
  "bytemuck",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "oxideav-dts"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9762858ba5165eedaed243808cebbefca285c619bd1a2c337d0f7f02204a2918"
+dependencies = [
+ "oxideav-core",
+]
+
+[[package]]
+name = "oxideav-mp2"
+version = "0.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19c132641af52d4dce3d1f56e92325f0c682e9b49d1dceadc96bd6d02fa74ee1"
+dependencies = [
+ "oxideav-core",
+]
+
+[[package]]
+name = "oxideav-mpeg12video"
+version = "0.0.13"
+dependencies = [
+ "oxideav-core",
 ]
 
 [[package]]
