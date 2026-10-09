@@ -1,5 +1,5 @@
-fixtures/discs/
-.ref/
+fixtures/discs
+.ref
 target/
 web/pkg/
 __pycache__/
