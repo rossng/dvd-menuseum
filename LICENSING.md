@@ -14,6 +14,7 @@ trait in `menuseum-core` so that nothing else needs it.
 | `crates/wasm/` | GPL-2.0-or-later | the browser player links the engine |
 | `oracle/` | GPL-2.0-or-later | built against libdvdnav's internal headers |
 | `vendor/oxideav-mpeg12video/` | MIT | third-party, with local changes ([its LICENSE](vendor/oxideav-mpeg12video/LICENSE)) |
+| `fixtures/bundles/*.tar.zst` | per disc, CC | disc content; see [fixtures/README.md](fixtures/README.md) |
 
 `menuseum-core`, `menuseum-lpcm` and `menuseum-media` don't depend on the engine
 (`menuseum-media` uses it only for `examples/play.rs`). A binary built from them

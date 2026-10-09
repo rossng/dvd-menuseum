@@ -64,6 +64,8 @@ A bundle is the disc with its film removed:
 
 Title VOB sets (`VTS_nn_1..9.VOB`, the film) are left out. Their cells play as a short "not included" placeholder, so post-commands still run and menus still return. Menu VOBs are kept whole, so the bundle plays exactly as the disc's menus do.
 
+That makes bundles large: menu video is ordinary DVD-bitrate MPEG-2, and discs with motion menus carry 2–4 minutes of it (125–190 MB). Being already compressed, it barely compresses further. The exception is menus that repeat the same encoded video, which zstd's long mode collapses. Fixture bundles are committed as `.tar.zst` in Git LFS and extracted for use (`fixtures/README.md`). The player streams the extracted files with HTTP range requests.
+
 ## Testing
 
 1. Unit tests for parsing, the VM, subpictures and LPCM.

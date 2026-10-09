@@ -1,4 +1,7 @@
 fixtures/discs
+# extracted from fixtures/bundles/<slug>.tar.zst by scripts/bundles.py
+fixtures/bundles/*/
+fixtures/bundles/.*.tmp/
 .ref
 target/
 web/pkg/

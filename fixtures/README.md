@@ -20,6 +20,20 @@ fixtures/discs/<slug>/
 
 The menu-only `VIDEO_TS/` is extracted independently of `disc.iso`, so it doubles as a reference for what the stripper must preserve.
 
+## Menu bundles
+
+`bundles/<slug>.tar.zst` are the discs' menu bundles (`menuseum bundle`: IFOs and menu VOBs, no film), stored in Git LFS as zstd archives. Menus often repeat the same encoded video, which zstd's long mode finds: 670 MB of bundles take 458 MB. `scripts/bundles.py` extracts them to `bundles/<slug>/` (gitignored), where the player and tests read them; `scripts/dev.sh` runs it. It re-extracts only an archive that changed.
+
+```sh
+scripts/bundles.py                       # extract missing or stale bundles
+menuseum bundle fixtures/discs/<slug>/disc.iso --out fixtures/bundles/<slug>
+scripts/bundles.py pack <slug>           # then commit fixtures/bundles/<slug>.tar.zst
+```
+
+Packing is reproducible, so an unchanged bundle repacks to the identical archive.
+
+## Discs
+
 | Slug | System | Licence | Credit | Why it's here |
 |---|---|---|---|---|
 | `elephants-dream-pal` | PAL | film CC BY 2.5 | Orange Open Movie Project, Blender Foundation and Netherlands Media Art Institute, 2006 | Professionally authored; 9 VTSs; ~180 MB motion menu |
@@ -31,3 +45,4 @@ The menu-only `VIDEO_TS/` is extracted independently of `disc.iso`, so it double
 
 Credits are as given on the archive.org items (`archive_id` in `discs.json`). The Elephants Dream and Sita uploads carry no licence tag of their own. The licences above are those of the films, which their makers released freely.
 
+The menu bundles in `bundles/` are adapted from these discs (stripped of their titles) and keep each disc's licence. The `av-calibration-*` bundles are NonCommercial and ShareAlike.
