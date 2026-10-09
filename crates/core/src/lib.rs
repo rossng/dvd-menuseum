@@ -6,9 +6,12 @@
 
 mod bytes;
 pub mod cmd;
+pub mod demux;
 pub mod ifo;
 pub mod nav;
 pub mod navigator;
+pub mod sectors;
+pub mod spu;
 pub mod vm;
 
 use std::fmt;
