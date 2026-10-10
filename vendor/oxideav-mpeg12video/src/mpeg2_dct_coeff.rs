@@ -1658,6 +1658,41 @@ impl DctCoeffStep {
         let peeked = br.peek_u32(peek_w).map_err(|_| Error::ShortHeader)?;
         let aligned = peeked << (MAX_CODE_LEN - peek_w);
 
+        // (0) Local change: look the codeword up in a decode table built
+        // from the same rows. The tables are prefix-free at each position,
+        // so this finds the row the walk below would; the walk remains for
+        // the last few bits of a buffer, where a row may not fit.
+        let entry = decode_lut(table, position).lookup(aligned >> 1);
+        if entry != 0 && available > entry & 0xff {
+            br.consume(entry & 0xff).map_err(|_| Error::ShortHeader)?;
+            let sign = br.read_u1().map_err(|_| Error::ShortHeader)?;
+            let level = (entry >> 16) as i16;
+            return Ok(Self {
+                symbol: DctCoeff::RunLevel {
+                    run: (entry >> 8) as u8,
+                    signed_level: if sign == 0 { level } else { -level },
+                    escape: false,
+                },
+                bit_position_after: br.bit_position(),
+            });
+        }
+        if peek_w < MAX_CODE_LEN {
+            if let Some(step) = Self::walk_tables(br, table, position, available, aligned) {
+                return step;
+            }
+        }
+        Self::parse_special(br, table, position, available, aligned)
+    }
+
+    /// The upstream walk over the codeword rows: longest width first,
+    /// rows of the width in table order.
+    fn walk_tables(
+        br: &mut BitReader<'_>,
+        table: TableSelection,
+        position: CoefficientPosition,
+        available: u32,
+        aligned: u32,
+    ) -> Option<Result<Self>> {
         // (1) Per-table codeword walk, longest-first.
         let pages: [&[CoeffEntry]; 4] = match table {
             TableSelection::TableZero => [
@@ -1688,45 +1723,43 @@ impl DctCoeffStep {
                     if entry.bits != cand_w || u32::from(entry.code) != candidate {
                         continue;
                     }
-                    // Table B-14 FIRST/NEXT gating (Table B-15 has
-                    // no NOTE 2/3 alternate, so its `(0, 1)` row is
-                    // always legal).
-                    if table == TableSelection::TableZero {
-                        // `1s` (1-bit) is FIRST-only.
-                        if entry.bits == 1 && position == CoefficientPosition::Next {
-                            continue;
-                        }
-                        // `11s` (2-bit) is NEXT-only — only the `(0, 1)`
-                        // entry. Other 2-bit entries (none exist in
-                        // Table B-14) would not be filtered.
-                        if entry.bits == 2
-                            && entry.code == 0b11
-                            && position == CoefficientPosition::First
-                        {
-                            continue;
-                        }
+                    if !row_allowed(table, position, &entry) {
+                        continue;
                     }
                     // Consume codeword + sign bit.
-                    br.consume(u32::from(entry.bits))
-                        .map_err(|_| Error::ShortHeader)?;
-                    let sign = br.read_u1().map_err(|_| Error::ShortHeader)?;
-                    let signed_level = if sign == 0 {
-                        i16::from(entry.level)
-                    } else {
-                        -i16::from(entry.level)
-                    };
-                    return Ok(Self {
-                        symbol: DctCoeff::RunLevel {
-                            run: entry.run,
-                            signed_level,
-                            escape: false,
-                        },
-                        bit_position_after: br.bit_position(),
-                    });
+                    let sign = br
+                        .consume(u32::from(entry.bits))
+                        .and_then(|_| br.read_u1())
+                        .map_err(|_| Error::ShortHeader);
+                    return Some(sign.map(|sign| {
+                        let signed_level = if sign == 0 {
+                            i16::from(entry.level)
+                        } else {
+                            -i16::from(entry.level)
+                        };
+                        Self {
+                            symbol: DctCoeff::RunLevel {
+                                run: entry.run,
+                                signed_level,
+                                escape: false,
+                            },
+                            bit_position_after: br.bit_position(),
+                        }
+                    }));
                 }
             }
         }
+        None
+    }
 
+    /// The escape and `end_of_block` codes, tried when no row matched.
+    fn parse_special(
+        br: &mut BitReader<'_>,
+        table: TableSelection,
+        position: CoefficientPosition,
+        available: u32,
+        aligned: u32,
+    ) -> Result<Self> {
         // (2) Escape (`000001`, 6 bits) — needs 6 prefix + 6 run +
         // 12 level = 24 bits total.
         if available >= ESCAPE_BITS + ESCAPE_PAYLOAD_BITS {
@@ -1808,6 +1841,109 @@ impl DctCoeffStep {
             },
             bit_position_after: br.bit_position(),
         })
+    }
+}
+
+/// Table B-14 FIRST/NEXT gating (Table B-15 has no NOTE 2/3 alternate,
+/// so its `(0, 1)` row is always legal).
+fn row_allowed(table: TableSelection, position: CoefficientPosition, entry: &CoeffEntry) -> bool {
+    if table == TableSelection::TableZero {
+        // `1s` (1-bit) is FIRST-only.
+        if entry.bits == 1 && position == CoefficientPosition::Next {
+            return false;
+        }
+        // `11s` (2-bit) is NEXT-only — only the `(0, 1)`
+        // entry. Other 2-bit entries (none exist in
+        // Table B-14) would not be filtered.
+        if entry.bits == 2 && entry.code == 0b11 && position == CoefficientPosition::First {
+            return false;
+        }
+    }
+    true
+}
+
+// =============================================================
+// Decode tables (local change)
+// =============================================================
+
+/// The rows of one codeword table at one position, indexed for lookup.
+/// Every codeword is some leading zeros, a one, then a tail of at most
+/// a few bits, so the rows are grouped by leading zeros: `groups[z]` is
+/// the offset into `rows` of the group with `z` leading zeros and the
+/// width of its longest tail, and the group holds a slot for every value
+/// of that tail. A slot packs `bits | run << 8 | level << 16`, or is 0
+/// where no row matches.
+struct DecodeLut {
+    groups: [(u16, u8); 16],
+    rows: Vec<u32>,
+}
+
+impl DecodeLut {
+    fn build(table: TableSelection, position: CoefficientPosition) -> Self {
+        let mut entries: Vec<CoeffEntry> = table_pages(table)
+            .into_iter()
+            .flatten()
+            .copied()
+            .filter(|e| row_allowed(table, position, e))
+            .collect();
+        // (leading zeros, tail width) of a codeword.
+        let shape = |e: &CoeffEntry| {
+            let z = u32::from(e.bits) - (16 - e.code.leading_zeros());
+            (z as usize, u32::from(e.bits) - z - 1)
+        };
+        let mut groups = [(0u16, 0u8); 16];
+        for e in &entries {
+            let (z, t) = shape(e);
+            groups[z].1 = groups[z].1.max(t as u8);
+        }
+        let mut n = 0u16;
+        for g in &mut groups {
+            g.0 = n;
+            n += 1 << g.1;
+        }
+        let mut rows = vec![0u32; usize::from(n)];
+        // Shortest first, so a longer row wins over a prefix of it, as in
+        // the longest-first walk.
+        entries.sort_by_key(|e| e.bits);
+        for e in &entries {
+            let (z, t) = shape(e);
+            let (offset, width) = groups[z];
+            let free = u32::from(width) - t;
+            let start = usize::from(offset) + (((u32::from(e.code) & ((1 << t) - 1)) << free) as usize);
+            let packed = u32::from(e.bits) | u32::from(e.run) << 8 | u32::from(e.level) << 16;
+            rows[start..start + (1 << free)].fill(packed);
+        }
+        DecodeLut { groups, rows }
+    }
+
+    /// The row whose codeword starts the 16-bit `window`, or 0.
+    #[inline]
+    fn lookup(&self, window: u32) -> u32 {
+        let z = (window as u16).leading_zeros();
+        if z >= 16 {
+            return 0;
+        }
+        let (offset, width) = self.groups[z as usize];
+        let tail = ((window << (z + 1)) & 0xffff) >> (16 - u32::from(width));
+        self.rows[usize::from(offset) + tail as usize]
+    }
+}
+
+/// The decode table for `table` at `position`, built on first use.
+fn decode_lut(table: TableSelection, position: CoefficientPosition) -> &'static DecodeLut {
+    static LUTS: std::sync::OnceLock<[DecodeLut; 3]> = std::sync::OnceLock::new();
+    let luts = LUTS.get_or_init(|| {
+        [
+            DecodeLut::build(TableSelection::TableZero, CoefficientPosition::First),
+            DecodeLut::build(TableSelection::TableZero, CoefficientPosition::Next),
+            DecodeLut::build(TableSelection::TableOne, CoefficientPosition::Next),
+        ]
+    });
+    match (table, position) {
+        (TableSelection::TableZero, CoefficientPosition::First) => &luts[0],
+        (TableSelection::TableZero, CoefficientPosition::Next) => &luts[1],
+        // Table B-15 has no FIRST/NEXT gating.
+        (TableSelection::TableOne, _) => &luts[2],
     }
 }
 
@@ -1951,6 +2087,35 @@ mod tests {
             .chain(TABLE_B15_PAGE2)
             .chain(TABLE_B15_PAGE3)
             .chain(TABLE_B15_PAGE4)
+    }
+
+    // ----- decode tables (local change) -----
+
+    /// Every 16-bit window finds the row the longest-first walk would.
+    #[test]
+    fn decode_lut_matches_longest_first_walk() {
+        for (table, position) in [
+            (TableSelection::TableZero, CoefficientPosition::First),
+            (TableSelection::TableZero, CoefficientPosition::Next),
+            (TableSelection::TableOne, CoefficientPosition::First),
+            (TableSelection::TableOne, CoefficientPosition::Next),
+        ] {
+            let lut = decode_lut(table, position);
+            let rows: Vec<CoeffEntry> = table_pages(table)
+                .into_iter()
+                .flatten()
+                .copied()
+                .filter(|e| row_allowed(table, position, e))
+                .collect();
+            for window in 0..1u32 << 16 {
+                let want = rows
+                    .iter()
+                    .filter(|e| window >> (16 - u32::from(e.bits)) == u32::from(e.code))
+                    .max_by_key(|e| e.bits)
+                    .map_or(0, |e| u32::from(e.bits) | u32::from(e.run) << 8 | u32::from(e.level) << 16);
+                assert_eq!(lut.lookup(window), want, "{table:?} {position:?} {window:016b}");
+            }
+        }
     }
 
     // ----- §7.2.2.1 Table 7-3 selector -----
