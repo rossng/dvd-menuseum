@@ -253,7 +253,10 @@ pub fn saturate_input(value: i32) -> i32 {
 ///
 /// `f64::round` already implements ties-away-from-zero on stable Rust,
 /// matching the `Round` operator in ISO/IEC 13818-2 §4.1.
-#[inline]
+///
+/// Local change: now used only by the tests, which check
+/// [`round_half_away`] against it.
+#[cfg(test)]
 fn round_to_int(value: f64) -> i32 {
     value.round() as i32
 }
@@ -375,24 +378,80 @@ pub fn idct_candidate_f64(input: &[[f64; 8]; 8]) -> [[f64; 8]; 8] {
 /// (`F[7][7]` parity toggle) or the MPEG-1 §2.4.4 per-coefficient
 /// oddification before invoking the IDCT.
 pub fn idct_8x8(input: &[[i16; 8]; 8]) -> [[i16; 8]; 8] {
-    // Promote to f64 once; the IDCT formula factor naturally produces
-    // an unrounded sample value that we round + clamp here.
-    let mut promoted = [[0.0f64; 8]; 8];
+    // Local change: the products and sums of `idct_candidate_f64`, in the
+    // same order for every output, but with each pass accumulating a
+    // whole row of outputs at once (which vectorises) and skipping zero
+    // coefficients and all-zero rows. A skipped term is ±0, which leaves a
+    // sum unchanged but for the sign of a zero, and a zero rounds to 0
+    // either way, so the output is bit-identical (tested below).
+    let table = cos_table_ref();
+    // Pass 1, rows: inter[v][x] = Σ_u (C(u) F[v][u]) cos[x][u] / 2.
+    let mut inter = [[0.0f64; 8]; 8];
+    let mut live = [false; 8];
     for v in 0..8usize {
+        let mut sum = [0.0f64; 8];
         for u in 0..8usize {
-            promoted[v][u] = f64::from(input[v][u]);
+            if input[v][u] == 0 {
+                continue;
+            }
+            live[v] = true;
+            let a = alpha(u) * f64::from(input[v][u]);
+            for x in 0..8usize {
+                sum[x] += a * COS_TABLE_BY_U[u][x];
+            }
+        }
+        for x in 0..8usize {
+            // C(v) is applied here, as pass 2 of the candidate applies it
+            // to its column input before the cosine.
+            inter[v][x] = alpha(v) * (sum[x] * 0.5);
         }
     }
-    let real = idct_candidate_f64(&promoted);
+    // Pass 2, columns: f[y][x] = Σ_v (C(v) inter[v][x]) cos[y][v] / 2.
     let mut out = [[0i16; 8]; 8];
     for y in 0..8usize {
+        let mut sum = [0.0f64; 8];
+        for v in 0..8usize {
+            if !live[v] {
+                continue;
+            }
+            let c = table[y][v];
+            for x in 0..8usize {
+                sum[x] += inter[v][x] * c;
+            }
+        }
         for x in 0..8usize {
-            let clamped = saturate_output(round_to_int(real[y][x]));
-            // The clamp guarantees `clamped` fits in i16.
-            out[y][x] = clamped as i16;
+            // The clamp guarantees the result fits in i16.
+            out[y][x] = saturate_output(round_half_away(sum[x] * 0.5)) as i16;
         }
     }
     out
+}
+
+/// Local change: [`COS_TABLE`] transposed, `[u][x]`, so pass 1 of
+/// [`idct_8x8`] reads a row of it per coefficient.
+const COS_TABLE_BY_U: [[f64; 8]; 8] = {
+    let mut t = [[0.0f64; 8]; 8];
+    let mut u = 0;
+    while u < 8 {
+        let mut x = 0;
+        while x < 8 {
+            t[u][x] = COS_TABLE[x][u];
+            x += 1;
+        }
+        u += 1;
+    }
+    t
+};
+
+/// Local change: [`round_to_int`] without the call to `round` that
+/// wasm32 makes for it (wasm has only ties-to-even rounding). Exact for
+/// the IDCT's magnitudes: the fraction `value - trunc(value)` is exact
+/// below 2^52.
+#[inline]
+fn round_half_away(value: f64) -> i32 {
+    let t = value.trunc();
+    let r = if (value - t).abs() >= 0.5 { t + value.signum() } else { t };
+    r as i32
 }
 
 /// Convenience wrapper around [`idct_8x8`] that accepts an `i32`
@@ -417,6 +476,56 @@ pub fn idct_8x8_from_i32(input: &[[i32; 8]; 8]) -> [[i16; 8]; 8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Local change: `idct_8x8` as upstream computed it.
+    fn idct_8x8_upstream(input: &[[i16; 8]; 8]) -> [[i16; 8]; 8] {
+        let mut promoted = [[0.0f64; 8]; 8];
+        for v in 0..8usize {
+            for u in 0..8usize {
+                promoted[v][u] = f64::from(input[v][u]);
+            }
+        }
+        let real = idct_candidate_f64(&promoted);
+        let mut out = [[0i16; 8]; 8];
+        for y in 0..8usize {
+            for x in 0..8usize {
+                out[y][x] = saturate_output(round_to_int(real[y][x])) as i16;
+            }
+        }
+        out
+    }
+
+    /// Local change: the rearranged `idct_8x8` matches upstream's bit for
+    /// bit: every single-coefficient block, then random blocks of every
+    /// density.
+    #[test]
+    fn idct_8x8_matches_upstream() {
+        for pos in 0..64 {
+            for level in F_INPUT_MIN..=F_INPUT_MAX {
+                let mut block = [[0i16; 8]; 8];
+                block[pos / 8][pos % 8] = level as i16;
+                assert_eq!(idct_8x8(&block), idct_8x8_upstream(&block), "{pos} {level}");
+            }
+        }
+        let mut seed = 0x2545_f491_4f6c_dd1du64;
+        let mut next = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        for i in 0..200_000 {
+            let density = 1 + i % 64;
+            let range = [8, 64, 512, 4096][i / 64 % 4];
+            let mut block = [[0i16; 8]; 8];
+            for _ in 0..density {
+                let pos = (next() % 64) as usize;
+                let level = (next() % range) as i32 - (range / 2) as i32;
+                block[pos / 8][pos % 8] = saturate_input(level) as i16;
+            }
+            assert_eq!(idct_8x8(&block), idct_8x8_upstream(&block), "{block:?}");
+        }
+    }
 
     #[test]
     fn all_zero_input_yields_all_zero_output() {

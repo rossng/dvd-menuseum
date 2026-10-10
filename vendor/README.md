@@ -20,6 +20,12 @@ From crates.io (MIT, https://github.com/OxideAV/oxideav-mpeg12video). Local chan
   included, all lie inside the reference plane or field is formed a row at
   a time from the plane, rather than sample by sample through the
   pad-to-edge reader. Blocks reaching past an edge take the upstream path.
+- `idct::idct_8x8`: performs the same floating-point products and sums as
+  upstream's `idct_candidate_f64` (in the same order for every output, so
+  the result is bit-identical), but accumulates a row of outputs at a time,
+  skips zero coefficients and all-zero rows, and rounds without wasm's call
+  to `round`. A test compares it with upstream on every single-coefficient
+  block and 200,000 random ones.
 - `examples/stream_decode.rs`: decodes an elementary stream through `StreamDecoder`
   in 2 KB chunks, for comparison against `decode_to_yuv` and ffmpeg.
 
