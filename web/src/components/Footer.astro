@@ -3,14 +3,14 @@
 // serves, including where the player's source is (for the GPL), and the Seal
 // of Slop.
 import { discs, source, url, licenceDeed } from "../lib/site.js";
+import { BLUE_OAK, GPL, crates, bundled } from "../lib/licences.js";
 
-const BLUE_OAK = "https://blueoakcouncil.org/license/1.0.0";
-const GPL = "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html";
 const SEAL = `This project is 100% vibe coded and I have not reviewed the code.
 
 After seeing https://dvdmoviemenus.com/ I wished that there was an interactive archive available and thought it would be cool if we could do the entire thing client-side from the original DVD data.
 
 No guarantees or support are offered.`;
+const crateGroups = Object.entries(Object.groupBy(crates, (c) => c.licence));
 ---
 <footer>
   <a href="#licences" id="licences-link">Licences</a>
@@ -22,15 +22,17 @@ No guarantees or support are offered.`;
   <div class="body">
     <h3>Software</h3>
     <table>
-      <tr><td>This website</td><td><a href={BLUE_OAK} rel="noopener">Blue Oak Model License 1.0.0</a></td></tr>
-      <tr><td>DVD player (WebAssembly): <a href={source} rel="noopener">source code</a></td><td><a href={GPL} rel="noopener">GPL-2.0-or-later</a></td></tr>
-      <tr><td>&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham</td><td><a href={GPL} rel="noopener">GPL-2.0-or-later</a></td></tr>
-      <tr><td>&nbsp;&nbsp;oxideav decoders, © Karpelès Lab Inc.</td><td>MIT</td></tr>
-      <tr><td>&nbsp;&nbsp;bytemuck, memchr, itoa, thiserror, zmij, serde_core, serde_json</td><td>MIT</td></tr>
-      <tr><td><a href="https://www.rossng.eu/seal-of-slop/" rel="noopener">Seal of Slop</a></td><td><a href={BLUE_OAK} rel="noopener">Blue Oak Model License 1.0.0</a></td></tr>
-      <tr><td>Open Sans typeface</td><td><a href="https://openfontlicense.org" rel="noopener">SIL Open Font License 1.1</a></td></tr>
+      <tr><td>This website</td><td><a href={BLUE_OAK.url} rel="noopener">{BLUE_OAK.name}</a></td></tr>
+      <tr><td>DVD player (WebAssembly): <a href={source} rel="noopener">source code</a></td><td><a href={GPL.url} rel="noopener">{GPL.name}</a></td></tr>
+      <tr><td>&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham</td><td><a href={GPL.url} rel="noopener">{GPL.name}</a></td></tr>
+      {crateGroups.map(([licence, list]) => (
+        <tr><td>&nbsp;&nbsp;{list.map((c) => c.name).join(", ")}</td><td>{licence}</td></tr>
+      ))}
+      {bundled.map((b) => (
+        <tr><td><a href={b.url} rel="noopener">{b.name}</a></td><td><a href={b.licence.url} rel="noopener">{b.licence.name}</a></td></tr>
+      ))}
     </table>
-    <p><a href={url("NOTICE.md")}>Full notices</a></p>
+    <p><a href={url("notices/")}>Full notices</a></p>
     <h3>Discs</h3>
     <p>The menus are taken from the original discs, without their films.</p>
     <table>
@@ -44,7 +46,6 @@ No guarantees or support are offered.`;
   </div>
 </dialog>
 
-<script type="module" src="https://cdn.jsdelivr.net/npm/seal-of-slop@0.1.1/dist/index.js" is:inline></script>
 <script>
   const dialog = document.getElementById("licences");
   dialog.querySelector(".close").addEventListener("click", () => dialog.close());
@@ -53,4 +54,10 @@ No guarantees or support are offered.`;
     e.preventDefault();
     dialog.showModal();
   });
+
+  // The seal is most of the site's script by size: load it once the page,
+  // and the player on it, have settled.
+  const seal = () => import("seal-of-slop");
+  if ("requestIdleCallback" in window) requestIdleCallback(seal, { timeout: 3000 });
+  else setTimeout(seal, 1500);
 </script>

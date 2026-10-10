@@ -1,0 +1,121 @@
+{
+  "_comment": "Written by scripts/notices.py; don't edit.",
+  "licences": [
+    {
+      "licence": "MIT",
+      "text": "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+      "crates": [
+        {
+          "name": "bytemuck",
+          "version": "1.25.2",
+          "offered": "Zlib OR Apache-2.0 OR MIT",
+          "copyright": [
+            "Copyright (c) 2019 Daniel \"Lokathor\" Gee."
+          ]
+        }
+      ]
+    },
+    {
+      "licence": "MIT",
+      "text": "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+      "crates": [
+        {
+          "name": "itoa",
+          "version": "1.0.18",
+          "offered": "MIT OR Apache-2.0",
+          "copyright": [],
+          "authors": [
+            "David Tolnay"
+          ]
+        },
+        {
+          "name": "memchr",
+          "version": "2.8.3",
+          "offered": "Unlicense OR MIT",
+          "copyright": [
+            "Copyright (c) 2015 Andrew Gallant"
+          ]
+        },
+        {
+          "name": "oxideav-ac3",
+          "version": "0.0.11",
+          "offered": "MIT",
+          "copyright": [
+            "Copyright (c) 2026 Karpelès Lab Inc."
+          ]
+        },
+        {
+          "name": "oxideav-core",
+          "version": "0.1.39",
+          "offered": "MIT",
+          "copyright": [
+            "Copyright (c) 2026 Karpelès Lab Inc."
+          ]
+        },
+        {
+          "name": "oxideav-dts",
+          "version": "0.0.2",
+          "offered": "MIT",
+          "copyright": [
+            "Copyright (c) 2026 Karpelès Lab Inc."
+          ]
+        },
+        {
+          "name": "oxideav-mp2",
+          "version": "0.0.10",
+          "offered": "MIT",
+          "copyright": [
+            "Copyright (c) 2026 Karpelès Lab Inc."
+          ]
+        },
+        {
+          "name": "oxideav-mpeg12video",
+          "version": "0.0.13",
+          "offered": "MIT",
+          "copyright": [
+            "Copyright (c) 2026 Karpelès Lab Inc."
+          ],
+          "note": "vendored, with local changes"
+        },
+        {
+          "name": "serde_core",
+          "version": "1.0.229",
+          "offered": "MIT OR Apache-2.0",
+          "copyright": [],
+          "authors": [
+            "Erick Tryzelaar",
+            "David Tolnay"
+          ]
+        },
+        {
+          "name": "serde_json",
+          "version": "1.0.151",
+          "offered": "MIT OR Apache-2.0",
+          "copyright": [],
+          "authors": [
+            "Erick Tryzelaar",
+            "David Tolnay"
+          ]
+        },
+        {
+          "name": "thiserror",
+          "version": "2.0.21",
+          "offered": "MIT OR Apache-2.0",
+          "copyright": [],
+          "authors": [
+            "David Tolnay"
+          ]
+        },
+        {
+          "name": "zmij",
+          "version": "1.0.23",
+          "offered": "MIT",
+          "copyright": [],
+          "authors": [
+            "David Tolnay"
+          ]
+        }
+      ]
+    }
+  ]
+}

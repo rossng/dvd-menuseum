@@ -83,6 +83,10 @@ jobs:
           # GitHub Pages sites are limited to 1 GB.
           if [ "$size" -gt 950 ]; then echo "::error::the site is ${size} MB, over the Pages limit"; exit 1; fi
           if [ "$size" -gt 800 ]; then echo "::warning::the site is ${size} MB, nearing the 1 GB Pages limit"; fi
+      - name: Smoke-test the site
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: node scripts/site-smoke.mjs _site
 
       - uses: actions/upload-pages-artifact@v3
         with:

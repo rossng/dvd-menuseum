@@ -5,11 +5,13 @@ printed label; build the pages from it (astro build); and place the bundles
 beside them.
 
 usage: scripts/site.py [--out DIR] [--copy] [--menuseum PATH] [--catalog-only]
+                       [--discs SLUG ...]
 
   --out DIR        where to build the site (default target/site)
   --copy           copy the bundles rather than symlinking them (for deployment)
   --menuseum PATH  the CLI that renders menus (default target/release/menuseum)
   --catalog-only   only write the catalog (for `npm run dev` in web/)
+  --discs SLUG...  only these discs (CI tests the site with just one)
 
 Expects the bundles extracted (scripts/bundles.py), web/pkg/ built
 (scripts/dev.sh --build-only) and web/node_modules installed (npm ci).
@@ -157,9 +159,14 @@ def main():
     ap.add_argument("--copy", action="store_true")
     ap.add_argument("--menuseum", type=Path, default=ROOT / "target" / "release" / "menuseum")
     ap.add_argument("--catalog-only", action="store_true")
+    ap.add_argument("--discs", nargs="+", metavar="SLUG")
     args = ap.parse_args()
 
     discs = json.loads((WEB / "discs.json").read_text())["discs"]
+    if args.discs:
+        if unknown := set(args.discs) - {d["slug"] for d in discs}:
+            raise SystemExit(f"not in web/discs.json: {' '.join(sorted(unknown))}")
+        discs = [d for d in discs if d["slug"] in args.discs]
     catalog = []
     for disc in discs:
         slug = disc["slug"]

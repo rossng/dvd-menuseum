@@ -50,7 +50,9 @@ web/       The website, an Astro site rendered statically from the catalog
            disc shelf, a player page per disc, one for the viewer's own DVD
            and the test harness, sharing src/player/player.js (video
            converted from YCbCr in a WebGL 2 shader, or RGBA from the
-           decoder without it; overlay, Web Audio, input).
+           decoder without it; overlay, Web Audio, input). Everything it
+           loads comes from the site itself, under a content security policy;
+           scripts/site-smoke.mjs checks every page in headless Chrome.
 ```
 
 The engine is a VOBU-granular port of libdvdnav's VM and block loop, kept in its own crate behind the `Navigator` trait so that only it and the programs that link it are GPL. It asks a `NavSource` for NAV packs. A sector that hasn't arrived yet is *pending*, so the browser can stream a bundle with HTTP range requests. A missing title VOB set is *stripped*, and the engine skips its cells.

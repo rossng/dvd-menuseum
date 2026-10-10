@@ -1,5 +1,10 @@
 ---
 // Every page of the site: the head, the aurora behind the page and the footer.
+// Open Sans is served with the site (the file for each alphabet loads only
+// when a page has text in it), so pages load nothing from elsewhere.
+import "@fontsource/open-sans/300.css";
+import "@fontsource/open-sans/400.css";
+import "@fontsource/open-sans/600.css";
 import "../styles/site.css";
 import Aurora from "../components/Aurora.astro";
 import Footer from "../components/Footer.astro";
@@ -15,9 +20,6 @@ const { title = "Menuseum", description = "An archive of interactive DVD menus."
 <title>{title}</title>
 <meta name="description" content={description}>
 <link rel="icon" href={url("favicon.svg")} type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap">
 <slot name="head" />
 </head>
 <body>

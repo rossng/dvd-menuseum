@@ -9,6 +9,8 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "astro": "7.3.5"
+    "@fontsource/open-sans": "5.2.7",
+    "astro": "7.3.5",
+    "seal-of-slop": "0.1.1"
   }
 }

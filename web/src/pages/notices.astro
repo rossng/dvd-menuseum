@@ -1,0 +1,82 @@
+---
+// The full notices of everything the site serves: the player's licence and
+// source, what it contains (src/data/notices.json, from scripts/notices.py),
+// what the pages bundle, and the discs.
+import Base from "../layouts/Base.astro";
+import { discs, source, url, licenceDeed } from "../lib/site.js";
+import { BLUE_OAK, GPL, OFL, LIBDVDNAV, crateLicences, bundled } from "../lib/licences.js";
+import ofl from "@fontsource/open-sans/LICENSE?raw";
+
+const [seal, openSans] = bundled;
+---
+<Base title="Notices · Menuseum" description="The licences and notices of the Menuseum's player, pages and discs.">
+<style is:global>
+  main.notices { max-width: 760px; margin: 0 auto; padding: 18px 16px 8px; }
+  .notices .wordmark { font-size: clamp(1.5rem, 5vw, 2rem); }
+  .notices section { margin-top: 18px; padding: 16px 22px; }
+  .notices h1 { margin: 18px 0 0; font-size: clamp(1.6rem, 5vw, 2.1rem); }
+  .notices h2 { font-size: 1.3rem; }
+  .notices h3 { font-size: 1rem; font-weight: 600; margin-top: 14px; }
+  .notices p, .notices li { color: var(--text-dim); }
+  .notices ul { padding-left: 1.2em; }
+  .notices pre {
+    margin: 10px 0 0; padding: 10px 12px; border-radius: 4px; max-height: 320px; overflow: auto; white-space: pre-wrap;
+    font: 0.78rem/1.5 Consolas, "Lucida Console", monospace; color: #9fd4f5; background: #02070c; border: 1px solid #000;
+  }
+</style>
+
+<main class="notices">
+  <a class="wordmark" href={url()}><img class="logo" src={url("favicon.svg")} alt="">menuseum</a>
+  <h1>Notices</h1>
+
+  <section class="glass">
+    <h2>The DVD player</h2>
+    <p>
+      The player (its WebAssembly module, <code>menuseum_wasm</code>) is free software under the
+      <a href={GPL.url} rel="noopener">GNU General Public License, version 2 or (at your option) any later version</a>.
+      Its source code is the <a href={source} rel="noopener">commit this site was built from</a>;
+      see <code>LICENSING.md</code> and <code>COPYING</code> there.
+    </p>
+    <h3>libdvdnav-derived navigation</h3>
+    <p>{LIBDVDNAV.join("; ")}. {GPL.name}.</p>
+    {crateLicences.map((g) => (
+      <>
+        <h3>Under the {g.licence} licence</h3>
+        <ul>
+          {g.crates.map((c) => (
+            <li>
+              <strong>{c.name}</strong> {c.version}{c.note && ` (${c.note})`}:{" "}
+              {c.copyright.length ? c.copyright.join("; ") : `by ${c.authors.join(", ")}`}
+              {c.offered !== g.licence && <span class="faint"> (offered under {c.offered})</span>}
+            </li>
+          ))}
+        </ul>
+        <pre>{g.text}</pre>
+      </>
+    ))}
+  </section>
+
+  <section class="glass">
+    <h2>The pages</h2>
+    <p>The pages and their scripts are under the <a href={BLUE_OAK.url} rel="noopener">{BLUE_OAK.name}</a>. They include:</p>
+    <h3><a href={seal.url} rel="noopener">{seal.name}</a></h3>
+    <p><a href={seal.licence.url} rel="noopener">{seal.licence.name}</a>.</p>
+    <h3><a href={openSans.url} rel="noopener">{openSans.name}</a></h3>
+    <p>{openSans.copyright}. <a href={OFL.url} rel="noopener">{OFL.name}</a>:</p>
+    <pre>{ofl}</pre>
+  </section>
+
+  <section class="glass">
+    <h2>The discs</h2>
+    <p>The menus are taken from the original discs, without their films, and keep each disc's licence.</p>
+    <ul>
+      {discs.map((d) => (
+        <li>
+          <a href={d.source} rel="noopener">{d.title}</a> ({d.system}): {d.credit}.{" "}
+          {licenceDeed(d.license) ? <a href={licenceDeed(d.license)} rel="noopener">{d.license}</a> : d.license}.
+        </li>
+      ))}
+    </ul>
+  </section>
+</main>
+</Base>

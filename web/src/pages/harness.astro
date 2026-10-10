@@ -1,6 +1,7 @@
 ---
 // The test harness: a bare player for any bundle (?bundle=<url>), with the
 // virtual machine's state and libdvdnav's quirks switchable (?compat=1).
+import { url } from "../lib/site.js";
 ---
 <!doctype html>
 <html lang="en">
@@ -8,6 +9,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Menuseum harness</title>
+<link rel="icon" href={url("favicon.svg")} type="image/svg+xml">
 <style is:global>
   :root { color-scheme: dark; --fg: #ddd; --muted: #888; --bg: #111; --panel: #1b1b1b; }
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, Menlo, monospace; }

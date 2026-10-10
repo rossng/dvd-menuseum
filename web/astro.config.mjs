@@ -53,9 +53,38 @@ function bundles() {
 
 export default defineConfig({
   base,
+  // Every page gets a content security policy, as a <meta> element (GitHub
+  // Pages can't send headers): everything comes from the site itself, with
+  // Astro's hashes for its inline scripts and styles. Style attributes are
+  // allowed: the shelf places its discs with them. Not applied by `astro dev`.
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "worker-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'none'",
+      ],
+      styleDirective: {
+        resources: [
+          { resource: "'self'", kind: "element" },
+          { resource: "'unsafe-inline'", kind: "attribute" },
+        ],
+      },
+    },
+  },
+  // No Markdown code to highlight, and Shiki's inline styles defeat the CSP.
+  markdown: { syntaxHighlight: false },
   vite: {
     plugins: [bundles()],
     // The player's worker imports its wasm module's URL.
     worker: { format: "es" },
+    // Small assets (the rarer alphabets' fonts) stay files, not data: URLs
+    // the CSP would refuse.
+    build: { assetsInlineLimit: 0 },
   },
 });
