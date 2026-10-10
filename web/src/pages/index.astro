@@ -260,7 +260,7 @@ addEventListener("popstate", () => {
 document.querySelector(".turn.prev").addEventListener("click", () => go(at - 1));
 document.querySelector(".turn.next").addEventListener("click", () => go(at + 1));
 addEventListener("keydown", (e) => {
-  if (document.querySelector("dialog[open]") || e.target.closest?.("a, input")) return;
+  if (e.target.closest?.("a, input")) return;
   if (e.key === "ArrowLeft") go(at - 1);
   else if (e.key === "ArrowRight") go(at + 1);
   else if (e.key === "Enter" && !e.target.closest?.("button")) play();

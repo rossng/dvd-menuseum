@@ -72,7 +72,7 @@ const [seal, openSans] = bundled;
     <ul>
       {discs.map((d) => (
         <li>
-          <a href={d.source} rel="noopener">{d.title}</a> ({d.system}): {d.credit}.{" "}
+          <a href={d.source} rel="noopener">{d.title}</a> ({[d.part, d.system].filter(Boolean).join(", ")}): {d.credit}.{" "}
           {licenceDeed(d.license) ? <a href={licenceDeed(d.license)} rel="noopener">{d.license}</a> : d.license}.
         </li>
       ))}

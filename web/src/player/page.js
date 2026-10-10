@@ -179,7 +179,7 @@ for (const b of document.querySelectorAll("[data-input]")) {
   b.addEventListener("click", () => send(kind, a));
 }
 addEventListener("keydown", (e) => {
-  if (document.querySelector("dialog[open]") || e.target.closest?.("a, summary, input")) return;
+  if (e.target.closest?.("a, summary, input")) return;
   if (e.target.closest?.("button") && (e.key === "Enter" || e.key === " ")) return; // the button's own click
   const k = KEYS[e.key];
   if (k) {

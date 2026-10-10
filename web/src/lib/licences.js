@@ -1,6 +1,6 @@
-// The licences of what the site serves, for the Licences dialog in every
-// page's footer and the notices page. The crates compiled into the player
-// come from src/data/notices.json, written by scripts/notices.py.
+// The licences of what the site serves, for the notices page (linked from
+// every page's footer). The crates compiled into the player come from
+// src/data/notices.json, written by scripts/notices.py.
 
 import notices from "../data/notices.json";
 
@@ -13,7 +13,6 @@ export const LIBDVDNAV = ["Copyright (C) 2000, 2001 Håkan Hjort", "Copyright (C
 
 // Groups of crates sharing a licence and its text.
 export const crateLicences = notices.licences;
-export const crates = crateLicences.flatMap((g) => g.crates.map((c) => ({ ...c, licence: g.licence })));
 
 // What the site bundles from npm.
 export const bundled = [

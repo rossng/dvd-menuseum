@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write web/src/data/notices.json: the third-party crates compiled into the
 web player (menuseum-wasm, for wasm32), with the licence each is used under
-and its notice, for the site's Licences dialog and notices page.
+and its notice, for the site's notices page.
 
 usage: scripts/notices.py [--check] [--cargo PATH]
 

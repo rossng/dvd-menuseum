@@ -1,60 +1,21 @@
 ---
-// The footer every page ends with: the licences of everything the site
-// serves, including where the player's source is (for the GPL), and the Seal
-// of Slop.
-import { discs, source, url, licenceDeed } from "../lib/site.js";
-import { BLUE_OAK, GPL, crates, bundled } from "../lib/licences.js";
+// The footer every page ends with: a link to the licences of everything the
+// site serves (the notices page, which says where the player's source is,
+// for the GPL), and the Seal of Slop.
+import { url } from "../lib/site.js";
 
 const SEAL = `This project is 100% vibe coded and I have not reviewed the code.
 
 After seeing https://dvdmoviemenus.com/ I wished that there was an interactive archive available and thought it would be cool if we could do the entire thing client-side from the original DVD data.
 
 No guarantees or support are offered.`;
-const crateGroups = Object.entries(Object.groupBy(crates, (c) => c.licence));
 ---
 <footer>
-  <a href="#licences" id="licences-link">Licences</a>
+  <a href={url("notices/")}>Licences</a>
   <seal-of-slop size="40" text={SEAL}></seal-of-slop>
 </footer>
 
-<dialog class="glass" id="licences" aria-labelledby="licences-title">
-  <div class="bar"><h2 id="licences-title">Licences</h2><button class="close" aria-label="Close">✕</button></div>
-  <div class="body">
-    <h3>Software</h3>
-    <table>
-      <tr><td>This website</td><td><a href={BLUE_OAK.url} rel="noopener">{BLUE_OAK.name}</a></td></tr>
-      <tr><td>DVD player (WebAssembly): <a href={source} rel="noopener">source code</a></td><td><a href={GPL.url} rel="noopener">{GPL.name}</a></td></tr>
-      <tr><td>&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham</td><td><a href={GPL.url} rel="noopener">{GPL.name}</a></td></tr>
-      {crateGroups.map(([licence, list]) => (
-        <tr><td>&nbsp;&nbsp;{list.map((c) => c.name).join(", ")}</td><td>{licence}</td></tr>
-      ))}
-      {bundled.map((b) => (
-        <tr><td><a href={b.url} rel="noopener">{b.name}</a></td><td><a href={b.licence.url} rel="noopener">{b.licence.name}</a></td></tr>
-      ))}
-    </table>
-    <p><a href={url("notices/")}>Full notices</a></p>
-    <h3>Discs</h3>
-    <p>The menus are taken from the original discs, without their films.</p>
-    <table>
-      {discs.map((d) => (
-        <tr>
-          <td><a href={d.source} rel="noopener">{d.title}</a> <span class="faint">{[d.part, d.system].filter(Boolean).join(" · ")}</span><br><span class="faint">{d.credit}</span></td>
-          <td>{licenceDeed(d.license) ? <a href={licenceDeed(d.license)} rel="noopener">{d.license}</a> : d.license}</td>
-        </tr>
-      ))}
-    </table>
-  </div>
-</dialog>
-
 <script>
-  const dialog = document.getElementById("licences");
-  dialog.querySelector(".close").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("click", (e) => e.target === dialog && dialog.close()); // the backdrop
-  document.getElementById("licences-link").addEventListener("click", (e) => {
-    e.preventDefault();
-    dialog.showModal();
-  });
-
   // The seal is most of the site's script by size: load it once the page,
   // and the player on it, have settled.
   const seal = () => import("seal-of-slop");

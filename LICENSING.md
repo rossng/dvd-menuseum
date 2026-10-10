@@ -29,9 +29,9 @@ the third-party crates compiled in (the oxideav crates, all Copyright (c) 2026
 Karpelès Lab Inc., and a few of their dependencies, all used under MIT).
 `scripts/notices.py` lists the player's from `cargo metadata` into
 `web/src/data/notices.json`, and CI checks the list is current. The site shows
-them on its notices page (`web/src/pages/notices.astro`) and in the Licences
-dialog in every page's footer, which also links the source of the commit the
-site was built from (`scripts/site.py` records it in the catalog).
+them on its notices page (`web/src/pages/notices.astro`, linked from every
+page's footer), which also links the source of the commit the site was built
+from (`scripts/site.py` records it in the catalog).
 
 Only the web player is distributed so far. A release of the `menuseum` binary
 would need the same notices shipped beside it.
