@@ -1,5 +1,6 @@
 // The catalog the pages are built from (as `virtual:catalog`, see
-// astro.config.mjs): the discs of fixtures/discs.json, in shelf order, each
+// astro.config.mjs): the discs of fixtures/discs.json, in shelf order and
+// without those marked `shelf: false`, each
 // joined with facts from its menu bundle (fixtures/bundles/<slug>/, extracted
 // by scripts/bundles.py) and its look (src/data/looks.json, written by
 // scripts/looks.py); and `source`, the commit the site is built from (the GPL
@@ -18,13 +19,14 @@ export const BUNDLES = fileURLToPath(new URL("fixtures/bundles/", ROOT));
 
 const json = (path) => JSON.parse(readFileSync(path, "utf8"));
 
-// The discs on the shelf: all of them, or those $DISCS names.
+// The discs on the shelf: all those not marked `shelf: false`, or those $DISCS
+// names.
 export function shelf() {
-  const all = json(DISCS).discs;
+  const all = json(DISCS).discs.filter((d) => d.shelf !== false);
   const only = process.env.DISCS?.split(/\s+/).filter(Boolean);
   if (!only) return all;
   const unknown = only.filter((slug) => !all.some((d) => d.slug === slug));
-  if (unknown.length) throw new Error(`$DISCS: not in fixtures/discs.json: ${unknown.join(" ")}`);
+  if (unknown.length) throw new Error(`$DISCS: not on the shelf in fixtures/discs.json: ${unknown.join(" ")}`);
   return all.filter((d) => only.includes(d.slug));
 }
 

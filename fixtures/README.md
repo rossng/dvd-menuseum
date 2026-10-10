@@ -35,6 +35,6 @@ Packing is reproducible, so an unchanged bundle repacks to the identical archive
 
 ## Discs
 
-`discs.json` is the one list of discs, in the order the site's shelf shows them. Each has the licence its menus keep (`license`: the film's, which its maker released freely), the attribution that asks for (`credit`), where it comes from (`archive_id`, the archive.org item, and `image`), and why it's here (`notes`, which also say where an upload is tagged with a different licence or none). Credits are as given on the archive.org items. The site's title, maker, year, `part` and `blurb` for each disc are there too.
+`discs.json` is the one list of discs, in the order the site's shelf shows them. Each has the licence its menus keep (`license`: the film's, which its maker released freely), the attribution that asks for (`credit`), where it comes from (`archive_id`, the archive.org item, and `image`), and why it's here (`notes`, which also say where an upload is tagged with a different licence or none). Credits are as given on the archive.org items. The site's title, maker, year, `part` and `blurb` for each disc are there too. A disc with `"shelf": false` stays a fixture but is left off the site, which has to fit in GitHub Pages' 1 GB.
 
 The menu bundles in `bundles/` are adapted from these discs (stripped of their titles) and keep each disc's licence. The `av-calibration-*` bundles are NonCommercial and ShareAlike; the `bloodspell-*` bundles are NonCommercial.

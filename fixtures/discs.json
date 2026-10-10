@@ -1,5 +1,5 @@
 {
-  "_comment": "The discs: freely licensed DVD-Video images on archive.org, in the order of the site's shelf. Discs with the same title (a film's PAL and NTSC discs, or the discs of a set) stack in one place on the shelf, told apart by `system` and, for a set, `part`. `credit` is the attribution the disc's licence asks for. scripts/fetch_discs.py fetches `image` from the archive.org item `archive_id`. `menu` holds `menuseum render` options (inputs, NAV packs to settle) for discs whose first menu isn't the one their label's colours are sampled from (scripts/looks.py).",
+  "_comment": "The discs: freely licensed DVD-Video images on archive.org, in the order of the site's shelf. Discs with the same title (a film's PAL and NTSC discs, or the discs of a set) stack in one place on the shelf, told apart by `system` and, for a set, `part`. `credit` is the attribution the disc's licence asks for. scripts/fetch_discs.py fetches `image` from the archive.org item `archive_id`. `menu` holds `menuseum render` options (inputs, NAV packs to settle) for discs whose first menu isn't the one their label's colours are sampled from (scripts/looks.py). `shelf: false` keeps a disc as a fixture but leaves it off the site.",
   "discs": [
     {
       "slug": "sita-sings-the-blues-pal",
@@ -41,7 +41,8 @@
       "blurb": "The NTSC disc of the official release.",
       "archive_id": "elephans-dream-iso",
       "image": "Elephans Dream Disk 2 NTSC.ISO",
-      "notes": "8 VTSs; NTSC counterpart of disc 1. The upload carries no licence tag; the film is CC BY 2.5.",
+      "notes": "8 VTSs; NTSC counterpart of disc 1. The upload carries no licence tag; the film is CC BY 2.5. Off the shelf: the site has to fit in GitHub Pages' 1 GB, and this is the biggest disc whose menus another disc repeats.",
+      "shelf": false,
       "menu": {
         "inputs": "activate"
       }
