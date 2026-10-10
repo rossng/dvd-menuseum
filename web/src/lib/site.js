@@ -22,7 +22,6 @@ export function variant(stack, d) {
 }
 
 export const playUrl =(d) => url(`play/${encodeURIComponent(d.slug)}/`);
-export const harnessUrl = (d) => `${url("harness/")}?bundle=${encodeURIComponent(url(d.bundle))}`;
 
 // The deed of a Creative Commons licence name ("CC BY-SA 3.0"), if it is one.
 export function licenceDeed(name) {

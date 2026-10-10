@@ -1,7 +1,7 @@
 // Presentation only: the player runs in player-worker.js. Frames, audio,
 // subpictures and button info arrive placed on a timeline (ms); the audio
 // clock maps the timeline to wall time, freezing it during stills and
-// stalls. Shared by the site's player page and the test harness.
+// stalls. Used by the player page (page.js).
 //
 // const p = createPlayer({video, overlay, placeholder}, {bundle | files, seed, compat}, hooks)
 //   files: [{path, file}], a local disc's VIDEO_TS (see player-worker.js)

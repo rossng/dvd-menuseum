@@ -5,7 +5,8 @@
 # requests the player streams with:
 #   http://localhost:8000/                                  the archive
 #   http://localhost:8000/play/<slug>/                      one disc
-#   http://localhost:8000/harness/?bundle=/bundles/<slug>/  test harness
+#   http://localhost:8000/play/local/?bundle=/bundles/<slug>/  any bundle, for
+#     testing; any player page also takes ?seed=<n> and ?compat=1
 # Bundles are extracted from their committed archives first (see
 # scripts/bundles.py; make new ones with `menuseum bundle <disc> --out
 # fixtures/bundles/<slug>` then `scripts/bundles.py pack <slug>`, and list

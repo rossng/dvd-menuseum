@@ -1,7 +1,7 @@
 /* The Menuseum look, after Windows Vista/7 and Windows Media Player 11:
    a deep blue sky crossed by aurora ribbons, smoked Aero glass with crisp
    1px highlights, light Segoe-style type, glossy black controls with blue
-   glows. Shared by every page but the test harness. */
+   glows. Shared by every page. */
 
 :root {
   --sky-0: #01142a;

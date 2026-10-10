@@ -4,7 +4,7 @@
 // viewer's own computer, chosen or dropped on the screen and read in place.
 import Base from "../layouts/Base.astro";
 import { discMarkup } from "../lib/disc.js";
-import { url, harnessUrl, licenceDeed } from "../lib/site.js";
+import { url, licenceDeed } from "../lib/site.js";
 
 const local = !Astro.props.disc;
 const disc = Astro.props.disc ?? { slug: "local", title: "Your DVD", blurb: "A DVD from your computer. It plays from your own files; nothing is uploaded." };
@@ -162,7 +162,7 @@ const deed = licenceDeed(disc.license);
     {!local && (
       <p class="small">
         {disc.credit} · {deed ? <a href={deed} rel="noopener">{disc.license}</a> : disc.license} ·
-        <a href={disc.source} rel="noopener">Disc image</a> · <a href={harnessUrl(disc)}>Test harness</a>
+        <a href={disc.source} rel="noopener">Disc image</a>
       </p>
     )}
   </section>

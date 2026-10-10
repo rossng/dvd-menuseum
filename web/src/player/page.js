@@ -1,6 +1,10 @@
 // The player page's behaviour (markup in components/Player.astro): starts the
 // player on the page's bundle, or, on the local page, on the files of a folder
 // the viewer chooses or drops on the screen, and wires up the remote.
+//
+// For testing, any player page takes ?bundle=<url> (play that bundle
+// instead), ?seed=<n> (seed the VM's random numbers) and ?compat=1 (play with
+// libdvdnav's quirks); any of them opens the Details panel.
 
 import { createPlayer, KEYS } from "./player.js";
 import { discMarkup } from "../lib/disc.js";
@@ -10,8 +14,10 @@ const $ = (id) => document.getElementById(id);
 const page = $("player").dataset;
 const local = "local" in page;
 const disc = { slug: "local", title: page.title }; // the slug only labels a local disc
+const params = new URLSearchParams(location.search);
+const testing = ["bundle", "seed", "compat"].some((k) => params.has(k));
+const options = { seed: Number(params.get("seed") ?? 0), compat: params.get("compat") === "1" };
 const stopLight = light($("insert"));
-$("insert").querySelector(".disc").classList.add("spinning");
 
 // What the status display calls each domain of the DVD virtual machine.
 const DOMAINS = { 1: "First play", 2: "Title", 4: "Main menu", 8: "Title set menu" };
@@ -23,26 +29,52 @@ const log = (msg) => {
   el.scrollTop = el.scrollHeight;
 };
 
+// The page's phase:
+//   empty    the local page, until a disc is chosen: the screen picks one
+//   loading  the disc is opening
+//   ready    it's open: the screen (or OK) plays it
+//   playing  the remote drives the player
+// A local disc that won't open goes back to empty, saying why.
+const PROMPTS = {
+  empty: "Choose a DVD’s folder (the one holding VIDEO_TS, or VIDEO_TS itself), or drop it here",
+  loading: "Loading…",
+  ready: "Play",
+};
+let phase = null;
 let player = null;
-let ready = false;
-let started = false;
 let aspect = null; // widescreen, as the player last said
-const load = (source) => (player = createPlayer(
-  { video: $("video"), overlay: $("overlay") },
-  source,
-  {
-    ready: () => {
-      ready = true;
-      $("insert").classList.remove("loading");
-      $("cta").textContent = "Play";
+
+function enter(next, prompt = PROMPTS[next]) {
+  phase = next;
+  const insert = $("insert");
+  if (next === "playing") {
+    // Leave the main thread to the player: nothing else moves while it runs.
+    stopLight();
+    document.querySelector(".aurora").classList.add("still");
+    if (aspect !== null) $("screen").classList.toggle("wide", aspect);
+    insert.classList.add("going");
+    setTimeout(() => insert.remove(), 600);
+    return;
+  }
+  insert.classList.toggle("loading", next === "loading");
+  insert.setAttribute("aria-label", next === "empty" ? "Choose a DVD" : "Play");
+  insert.querySelector(".disc").classList.add("spinning");
+  $("cta").textContent = prompt;
+}
+
+const load = (source) => {
+  enter("loading");
+  player = createPlayer({ video: $("video"), overlay: $("overlay") }, { ...source, ...options }, {
+    ready: (provider) => {
+      if (testing) log(`opened: ${provider || "untitled disc"}, seed ${options.seed}${options.compat ? ", libdvdnav quirks" : ""}`);
+      enter("ready");
     },
     log,
     error: (message) => {
-      if (local && !ready) {
-        $("cta").textContent = `Couldn't read that disc (${message.replace(/^Error: /, "")}). Choose another folder.`;
-        player?.terminate();
+      if (local && phase === "loading" && source.files) {
+        player.terminate();
         player = null;
-        $("insert").classList.remove("loading");
+        enter("empty", `Couldn't read that disc (${message.replace(/^Error: /, "")}). Choose another folder.`);
       } else if (/HTTP|fetch/i.test(message)) $("where").textContent = "Couldn't read the disc";
     },
     stats: (text) => ($("stats").textContent = text),
@@ -51,7 +83,7 @@ const load = (source) => (player = createPlayer(
     // reads ahead.
     widescreen: (wide) => {
       aspect = wide;
-      if (started) $("screen").classList.toggle("wide", wide);
+      if (phase === "playing") $("screen").classList.toggle("wide", wide);
     },
     placeholder: (text) => {
       $("notice").style.display = text ? "grid" : "none";
@@ -65,30 +97,27 @@ const load = (source) => (player = createPlayer(
         `domain ${DOMAINS[st.domain]} · vts ${st.vts} · pgc ${st.pgc} · pg ${st.pg} · cell ${st.cell} · button ${st.button}<br>` +
         `SPRM ${hex(st.sprm)}<br>GPRM ${hex(st.gprm)}`;
     },
-  },
-));
+  });
+  player.showRects($("rects").getAttribute("aria-pressed") === "true");
+};
 
-if (!local) load({ bundle: page.bundle });
-
-// A local disc: the files of a chosen or dropped folder, with their paths.
-// The disc takes the folder's name.
-function insertLocal(files) {
-  if (!files.length) return;
-  const top = files[0].path.includes("/") ? files[0].path.split("/")[0] : "those files";
-  const named = /^(VIDEO_TS|those files)$/i.test(top) ? null : top;
-  if (!files.some((f) => /(^|\/)VIDEO_TS\.IFO$/i.test(f.path))) {
-    $("cta").textContent = `There’s no VIDEO_TS.IFO in “${top}”. Choose a DVD’s folder, or its VIDEO_TS folder.`;
-    return;
-  }
-  disc.title = named ? named.replace(/[._]+/g, " ").trim() : "Your DVD";
+// A local disc takes the name of its folder (or bundle).
+function rename(name) {
+  disc.title = name && !/^VIDEO_TS$/i.test(name) ? name.replace(/[._]+/g, " ").trim() : "Your DVD";
   document.title = `${disc.title} · Menuseum`;
   $("insert-disc").innerHTML = discMarkup(disc);
-  $("insert").querySelector(".disc").classList.add("spinning");
   $("info").querySelector("h2").textContent = disc.title;
   $("where").textContent = disc.title;
-  $("insert").classList.add("loading");
-  $("insert").setAttribute("aria-label", "Play");
-  $("cta").textContent = "Loading…";
+}
+
+// The files of a chosen or dropped folder, with their paths.
+function insertLocal(files) {
+  if (!files.length) return;
+  const top = files[0].path.includes("/") ? files[0].path.split("/")[0] : null;
+  if (!files.some((f) => /(^|\/)VIDEO_TS\.IFO$/i.test(f.path))) {
+    return enter("empty", `There’s no VIDEO_TS.IFO in “${top ?? "those files"}”. Choose a DVD’s folder, or its VIDEO_TS folder.`);
+  }
+  rename(top);
   load({ files });
 }
 
@@ -108,9 +137,8 @@ async function walk(entries) {
   return out;
 }
 
-let picker = null;
+const picker = Object.assign(document.createElement("input"), { type: "file", webkitdirectory: true, hidden: true });
 if (local) {
-  picker = Object.assign(document.createElement("input"), { type: "file", webkitdirectory: true, hidden: true });
   picker.addEventListener("change", () => {
     insertLocal([...picker.files].map((file) => ({ path: file.webkitRelativePath || file.name, file })));
     picker.value = "";
@@ -119,7 +147,7 @@ if (local) {
 
   const screen = $("insert");
   screen.addEventListener("dragover", (e) => {
-    if (player) return;
+    if (phase !== "empty") return;
     e.preventDefault();
     screen.classList.add("dragging");
   });
@@ -127,28 +155,23 @@ if (local) {
   screen.addEventListener("drop", async (e) => {
     e.preventDefault();
     screen.classList.remove("dragging");
-    if (player) return;
+    if (phase !== "empty") return;
     const entries = [...e.dataTransfer.items].map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
     insertLocal(await walk(entries));
   });
 }
 
 $("insert").addEventListener("click", () => {
-  if (local && !player) return picker.click();
-  if ($("insert").classList.contains("loading") || started) return;
-  started = true;
-  // Leave the main thread to the player: nothing else moves while it runs.
-  stopLight();
-  document.querySelector(".aurora").classList.add("still");
-  player.start();
-  if (aspect !== null) $("screen").classList.toggle("wide", aspect);
-  $("insert").classList.add("going");
-  setTimeout(() => $("insert").remove(), 600);
+  if (phase === "empty") picker.click();
+  else if (phase === "ready") {
+    player.start();
+    enter("playing");
+  }
 });
 
-// Before playback starts, OK (or Enter) presses play.
+// Before playback starts, OK (or Enter) does what the screen does.
 const send = (kind, a) => {
-  if (!started) return kind === "activate" && $("insert").click();
+  if (phase !== "playing") return kind === "activate" && $("insert").click();
   player.input(kind, a);
 };
 for (const b of document.querySelectorAll("[data-input]")) {
@@ -164,10 +187,17 @@ addEventListener("keydown", (e) => {
     e.preventDefault();
   }
 });
-$("overlay").addEventListener("mousemove", (e) => started && player.input("pointer", ...player.pictureCoords(e)));
-$("overlay").addEventListener("click", (e) => started && player.input("click", ...player.pictureCoords(e)));
+$("overlay").addEventListener("mousemove", (e) => phase === "playing" && player.input("pointer", ...player.pictureCoords(e)));
+$("overlay").addEventListener("click", (e) => phase === "playing" && player.input("click", ...player.pictureCoords(e)));
 $("rects").addEventListener("click", () => {
   const on = $("rects").getAttribute("aria-pressed") !== "true";
   $("rects").setAttribute("aria-pressed", on);
-  player.showRects(on);
+  player?.showRects(on);
 });
+
+if (testing) document.querySelector("details.more").open = true;
+if (params.has("bundle")) {
+  if (local) rename(params.get("bundle").split("/").filter(Boolean).pop());
+  load({ bundle: params.get("bundle") });
+} else if (local) enter("empty");
+else load({ bundle: page.bundle });
