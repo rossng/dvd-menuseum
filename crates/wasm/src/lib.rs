@@ -8,8 +8,8 @@
 //!    to fetch, each supplied with `mm_put_chunk`.
 //! 3. `mm_next_output` until it returns 0: each output's JSON metadata is in
 //!    the result buffer (`mm_result_ptr` / `mm_result_len`) and any bulk data
-//!    (RGBA, f32 samples, subpicture indices) in the data buffer
-//!    (`mm_data_ptr` / `mm_data_len`).
+//!    (RGBA or planar YCbCr, f32 samples, subpicture indices) in the data
+//!    buffer (`mm_data_ptr` / `mm_data_len`).
 //! 4. `mm_input` for user input, `mm_still_done` when a still has elapsed.
 //!
 //! One player per module instance.
@@ -34,6 +34,8 @@ struct State {
     outputs: VecDeque<Output>,
     result: Vec<u8>,
     data: Vec<u8>,
+    /// Hand frames over as planar YCbCr rather than RGBA (`mm_frame_format`).
+    yuv: bool,
 }
 
 thread_local! {
@@ -45,6 +47,7 @@ thread_local! {
         outputs: VecDeque::new(),
         result: vec![],
         data: vec![],
+        yuv: false,
     });
 }
 
@@ -180,6 +183,22 @@ pub extern "C" fn mm_start(seed: f64, compat: i32, lookahead_ms: f64, cache_mb: 
     })
 }
 
+/// How frames are handed over: 0 RGBA (the default), 1 planar YCbCr 4:2:0
+/// as decoded (Y, then Cb, then Cr, each row-major; chroma planes
+/// `ceil(width / 2)` × `ceil(height / 2)`), for a host that converts on the
+/// GPU. YCbCr frames' metadata adds `"format":"yuv"` and `interlaced`
+/// (the host must deinterlace as `Picture::to_rgba` does).
+#[no_mangle]
+pub extern "C" fn mm_frame_format(format: u32) -> i32 {
+    with(|s| match format {
+        0 | 1 => {
+            s.yuv = format == 1;
+            1
+        }
+        _ => fail(s, format!("bad frame format {format}")),
+    })
+}
+
 /// Decode ahead of `presented_ms`. Returns 0 ahead, 1 need data, 2 in a
 /// still, 3 stopped, -1 not started.
 #[no_mangle]
@@ -265,6 +284,18 @@ pub extern "C" fn mm_next_output() -> i32 {
         let Some(o) = s.outputs.pop_front() else { return 0 };
         s.data.clear();
         let (kind, meta) = match o {
+            Output::Frame { epoch, at_ms, duration_ms, picture } if s.yuv => {
+                s.data.extend_from_slice(&picture.y);
+                s.data.extend_from_slice(&picture.cb);
+                s.data.extend_from_slice(&picture.cr);
+                (
+                    1,
+                    format!(
+                        r#"{{"epoch":{epoch},"at":{at_ms},"duration":{duration_ms},"width":{},"height":{},"format":"yuv","interlaced":{}}}"#,
+                        picture.width, picture.height, picture.interlaced
+                    ),
+                )
+            }
             Output::Frame { epoch, at_ms, duration_ms, picture } => {
                 s.data = picture.to_rgba();
                 (

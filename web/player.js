@@ -13,7 +13,10 @@
 
 export function createPlayer(els, opts, hooks = {}) {
   const { video, overlay } = els;
-  const vctx = video.getContext("2d"), octx = overlay.getContext("2d");
+  // Frames arrive as planar YCbCr and are converted to RGB in a shader
+  // where WebGL 2 is available, else as RGBA converted by the decoder.
+  const yuv = yuvRenderer(video);
+  const vctx = yuv ? null : video.getContext("2d"), octx = overlay.getContext("2d");
   const log = (msg) => hooks.log?.(msg);
   const worker = new Worker(new URL("player-worker.js", import.meta.url));
   const actx = new AudioContext();
@@ -194,7 +197,8 @@ export function createPlayer(els, opts, hooks = {}) {
     if (img) {
       const { width, height } = img;
       if (video.width !== width || video.height !== height) [video.width, video.height] = [width, height];
-      vctx.putImageData(new ImageData(new Uint8ClampedArray(img.data), width, height), 0, 0);
+      if (img.format === "yuv") yuv.draw(img);
+      else vctx.putImageData(new ImageData(new Uint8ClampedArray(img.data), width, height), 0, 0);
       lastFrame = img;
       shown++;
     }
@@ -249,6 +253,7 @@ export function createPlayer(els, opts, hooks = {}) {
     bundle: opts.bundle.endsWith("/") ? opts.bundle : opts.bundle + "/",
     seed: opts.seed ?? 0,
     compat: !!opts.compat,
+    yuv: !!yuv,
   });
 
   return {
@@ -266,6 +271,94 @@ export function createPlayer(els, opts, hooks = {}) {
     pictureCoords(e) {
       const r = overlay.getBoundingClientRect();
       return [Math.round(((e.clientX - r.left) / r.width) * overlay.width), Math.round(((e.clientY - r.top) / r.height) * overlay.height)];
+    },
+  };
+}
+
+// Draws planar YCbCr 4:2:0 frames on `canvas` with WebGL 2, converting
+// exactly as the decoder's Picture::to_rgba does (integer BT.601 studio
+// range, interlaced frames blended with the lines above and below), so the
+// pixels match the RGBA path's. Returns null without WebGL 2.
+function yuvRenderer(canvas) {
+  const gl = canvas.getContext("webgl2", { alpha: false, antialias: false, depth: false, stencil: false });
+  if (!gl) return null;
+  const shader = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const VERTEX = `#version 300 es
+    // One triangle covering the viewport.
+    void main() { gl_Position = vec4(gl_VertexID == 1 ? 3.0 : -1.0, gl_VertexID == 2 ? 3.0 : -1.0, 0.0, 1.0); }`;
+  const FRAGMENT = `#version 300 es
+    precision highp float;
+    precision highp int;
+    precision highp usampler2D;
+    uniform usampler2D Y, Cb, Cr;
+    uniform int height;
+    uniform bool interlaced;
+    out vec4 rgba;
+    int luma(int x, int y) { return int(texelFetch(Y, ivec2(x, y), 0).r); }
+    void main() {
+      int x = int(gl_FragCoord.x), y = height - 1 - int(gl_FragCoord.y);
+      int l = luma(x, y);
+      // (above + 2 * this + below) / 4
+      if (interlaced && y > 0 && y + 1 < height) l = (luma(x, y - 1) + 2 * l + luma(x, y + 1) + 2) / 4;
+      int u = int(texelFetch(Cb, ivec2(x / 2, y / 2), 0).r) - 128;
+      int v = int(texelFetch(Cr, ivec2(x / 2, y / 2), 0).r) - 128;
+      int c = (l - 16) * 298;
+      ivec3 rgb = clamp((ivec3(c) + ivec3(409 * v, -100 * u - 208 * v, 516 * u) + 128) >> 8, 0, 255);
+      rgba = vec4(vec3(rgb) / 255.0, 1.0);
+    }`;
+  function setup() {
+    const prog = gl.createProgram();
+    gl.attachShader(prog, shader(gl.VERTEX_SHADER, VERTEX));
+    gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FRAGMENT));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    gl.useProgram(prog);
+    const planes = ["Y", "Cb", "Cr"].map((name, i) => {
+      gl.activeTexture(gl.TEXTURE0 + i);
+      gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.uniform1i(gl.getUniformLocation(prog, name), i);
+      return { w: 0, h: 0 };
+    });
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    return { planes, height: gl.getUniformLocation(prog, "height"), interlaced: gl.getUniformLocation(prog, "interlaced") };
+  }
+  let st = setup();
+  // A lost context (GPU reset, a backgrounded tab on mobile) comes back
+  // empty: set up again when it is restored. Frames until then are skipped.
+  canvas.addEventListener("webglcontextlost", (e) => {
+    e.preventDefault();
+    st = null;
+  });
+  canvas.addEventListener("webglcontextrestored", () => (st = setup()));
+  return {
+    draw({ width, height, interlaced, data }) {
+      if (!st) return;
+      const cw = (width + 1) >> 1, ch = (height + 1) >> 1;
+      const bytes = new Uint8Array(data);
+      const dims = [[width, height, 0], [cw, ch, width * height], [cw, ch, width * height + cw * ch]];
+      st.planes.forEach((p, i) => {
+        const [w, h, offset] = dims[i];
+        const px = bytes.subarray(offset, offset + w * h);
+        gl.activeTexture(gl.TEXTURE0 + i);
+        if (p.w !== w || p.h !== h) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8UI, w, h, 0, gl.RED_INTEGER, gl.UNSIGNED_BYTE, px);
+          [p.w, p.h] = [w, h];
+        } else {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RED_INTEGER, gl.UNSIGNED_BYTE, px);
+        }
+      });
+      gl.uniform1i(st.height, height);
+      gl.uniform1i(st.interlaced, interlaced ? 1 : 0);
+      gl.viewport(0, 0, width, height);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
   };
 }

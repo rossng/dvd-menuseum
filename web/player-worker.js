@@ -2,7 +2,7 @@
 // sectors with HTTP range requests, runs the wasm player ahead of
 // presentation and posts its outputs to the page.
 //
-// Messages in:  {type: "open", bundle, seed, compat}
+// Messages in:  {type: "open", bundle, seed, compat, yuv}  yuv: frames as planar YCbCr, not RGBA
 //               {type: "presented", t}        presentation time (timeline ms)
 //               {type: "input", kind, a, b}
 //               {type: "still_done", epoch}
@@ -128,6 +128,8 @@ async function open(msg) {
     check(x.mm_declare_vobs(...p, v.sectors), v.id);
     x.mm_free(...p);
   }
+  // The page converts planar YCbCr frames on the GPU when it can.
+  check(x.mm_frame_format(msg.yuv ? 1 : 0), "frame format");
   check(x.mm_start(msg.seed ?? 0, msg.compat ? 1 : 0, 800, 96), "start");
   postMessage({ type: "ready", provider: manifest.provider });
   kick();

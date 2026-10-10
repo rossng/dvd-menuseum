@@ -2,7 +2,8 @@
 // uses, with chunks read from the bundle on disk and a simulated clock.
 //
 // usage: node scripts/wasm-smoke.mjs <bundle dir> [seconds] ['<time>:<input> ...']
-// (WASM=<path> runs another build of the module.)
+// (WASM=<path> runs another build of the module; FRAMES=yuv takes frames as
+// planar YCbCr, as the browser player does with WebGL 2, instead of RGBA.)
 import { readFile, open } from "node:fs/promises";
 import path from "node:path";
 
@@ -34,6 +35,7 @@ for (const v of manifest.vobs) {
   files.set(v.id, await open(path.join(dir, v.file)));
   if (!x.mm_declare_vobs(...copyIn(new TextEncoder().encode(v.id)), v.sectors)) throw new Error(text());
 }
+if (!x.mm_frame_format(process.env.FRAMES === "yuv" ? 1 : 0)) throw new Error(text());
 if (!x.mm_start(0, 0, 800, 96)) throw new Error(text());
 
 const counts = {};
