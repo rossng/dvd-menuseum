@@ -41,7 +41,7 @@ crates/
   media/   Decodes the VOBUs the engine selects into video frames, audio and
            subpictures, and runs the real-time player: a `Navigator` + decoders +
            a presentation timeline, driven by host ticks and input.
-  cli/     `menuseum`: info, disasm, trace, render, extract, bundle.
+  cli/     `menuseum`: info, disasm, trace, render, aspect, extract, bundle.
   wasm/    The player for the browser, plain C ABI, run in a Web Worker.
 vendor/    oxideav-mpeg12video with StreamDecoder.
 oracle/    libdvdnav built from source, with the same trace format.

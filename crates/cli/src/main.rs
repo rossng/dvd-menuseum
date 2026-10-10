@@ -24,6 +24,7 @@ commands:
   extract <disc> <vobs> <first> <last> --out FILE
                                  copy a sector range of a VOB set (vmgm, menu-N, title-N)
   bundle <disc> --out DIR       strip the disc to a menu bundle: its IFOs and menu VOBs
+  aspect <disc>                  the display aspect of the first picture: 16:9 or 4:3
   render <disc> --out DIR [trace options]
                                  like trace, also writing a PNG at every input point
 
@@ -193,6 +194,13 @@ fn run() -> Result<(), String> {
             bundle::bundle(&mut files, &disc, &PathBuf::from(out))?;
         }
         "disasm" => disasm(&disc),
+        "aspect" => {
+            // The domain the disc first plays in, and its video attributes.
+            let mut engine = Engine::new(disc, Quirks::default(), 0);
+            let opts = trace::Options { max_events: 1, settle: 0 };
+            trace::run(&mut engine, &mut files, &[], &opts, &mut |_, _, _| {});
+            println!("{}", if engine.video_attr().is_widescreen() { "16:9" } else { "4:3" });
+        }
         "trace" | "render" => {
             let mut script = vec![];
             let mut max_events = 200_000;
