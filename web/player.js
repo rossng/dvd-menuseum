@@ -3,12 +3,14 @@
 // clock maps the timeline to wall time, freezing it during stills and
 // stalls. Shared by the site's player page and the test harness.
 //
-// const p = createPlayer({video, overlay, placeholder}, {bundle, seed, compat}, hooks)
-//   hooks (all optional): ready(provider), state(st), log(msg), stats(text),
+// const p = createPlayer({video, overlay, placeholder}, {bundle | files, seed, compat}, hooks)
+//   files: [{path, file}], a local disc's VIDEO_TS (see player-worker.js)
+//   hooks (all optional): ready(provider), state(st), log(msg), stats(text), error(msg),
 //                         widescreen(bool), placeholder(text | null)
 //   p.start()                    begin playback (call from a user gesture)
 //   p.input(kind, a, b)          up/down/left/right/activate, menu <name>, pointer/click x y
 //   p.showRects(bool)            outline the buttons
+//   p.terminate()                stop the worker, before start() (a disc that won't open)
 //   p.pictureCoords(event)       pointer position in picture pixels
 
 export function createPlayer(els, opts, hooks = {}) {
@@ -308,7 +310,7 @@ export function createPlayer(els, opts, hooks = {}) {
 
   worker.postMessage({
     type: "open",
-    bundle: opts.bundle.endsWith("/") ? opts.bundle : opts.bundle + "/",
+    ...(opts.files ? { files: opts.files } : { bundle: opts.bundle.endsWith("/") ? opts.bundle : opts.bundle + "/" }),
     seed: opts.seed ?? 0,
     compat: !!opts.compat,
     yuv: !!yuv,
@@ -321,6 +323,10 @@ export function createPlayer(els, opts, hooks = {}) {
     },
     input(kind, a, b) {
       worker.postMessage({ type: "input", kind, a, b });
+    },
+    terminate() {
+      worker.terminate();
+      actx.close();
     },
     showRects(on) {
       rects = on;

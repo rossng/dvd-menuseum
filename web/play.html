@@ -39,6 +39,9 @@
   .insert.going .disc { transform: scale(0.3); }
   .insert .orb { width: 56px; height: 56px; pointer-events: none; }
   .insert.loading .orb { filter: grayscale(1) brightness(0.6); }
+  .insert.dragging { box-shadow: inset 0 0 0 3px var(--glow); }
+  #insert-disc { display: contents; }
+  #cta { max-width: 36em; padding: 0 16px; }
 
   .bar {
     position: relative; padding: 10px 14px 14px; border-top: 1px solid #000;
@@ -162,9 +165,14 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 aurora();
 const stopLight = light($("insert"));
 const slug = new URLSearchParams(location.search).get("disc");
-const { discs } = await (await fetch("catalog.json")).json();
-const disc = discs.find((d) => d.slug === slug);
-$("eject").href = disc ? `./#${encodeURIComponent(disc.slug)}` : "./";
+// disc=local plays a DVD from the viewer's own computer: a VIDEO_TS folder
+// they choose or drop on the screen, read in place, film and all.
+const local = slug === "local";
+const { discs } = local ? { discs: [] } : await (await fetch("catalog.json")).json();
+const disc = local
+  ? { slug: "local", title: "Your DVD", blurb: "A DVD from your computer. It plays from your own files; nothing is uploaded." }
+  : discs.find((d) => d.slug === slug);
+$("eject").href = disc && !local ? `./#${encodeURIComponent(disc.slug)}` : "./";
 
 if (!disc) {
   $("insert").remove();
@@ -173,18 +181,23 @@ if (!disc) {
   throw new Error("no disc");
 }
 
-document.title = `${disc.title} · Menuseum`;
-$("insert-disc").outerHTML = discMarkup(disc);
-$("insert").querySelector(".disc").classList.add("spinning");
-const by = [disc.maker, disc.year].filter(Boolean).map(esc).join(", ");
-$("info").innerHTML = `
-  <h2>${esc(disc.title)}</h2>
-  <p class="byline">${by ? `${by} ` : ""}<span class="tag">${esc(disc.system)}</span></p>
-  <p>${esc(disc.blurb)}</p>
-  <p class="small">Arrow keys and <kbd>Enter</kbd>, or click the menu. <kbd>T</kbd> title menu, <kbd>R</kbd> menu, <kbd>C</kbd> chapters, <kbd>Esc</kbd> return.</p>
-  <p class="small">${esc(disc.license)} · <a href="${esc(disc.source)}" rel="noopener">Disc image</a> ·
-    <a href="harness.html?bundle=${encodeURIComponent(disc.bundle)}">Test harness</a></p>`;
-$("where").textContent = disc.title;
+const KEYS_HELP = `<p class="small">Arrow keys and <kbd>Enter</kbd>, or click the menu. <kbd>T</kbd> title menu, <kbd>R</kbd> menu, <kbd>C</kbd> chapters, <kbd>Esc</kbd> return.</p>`;
+function label() {
+  document.title = `${disc.title} · Menuseum`;
+  $("insert-disc").innerHTML = discMarkup(disc);
+  $("insert").querySelector(".disc").classList.add("spinning");
+  const by = [disc.maker, disc.year].filter(Boolean).map(esc).join(", ");
+  const tag = disc.system ? `<span class="tag">${esc(disc.system)}</span>` : "";
+  $("info").innerHTML = `
+    <h2>${esc(disc.title)}</h2>
+    ${by || tag ? `<p class="byline">${by ? `${by} ` : ""}${tag}</p>` : ""}
+    <p>${esc(disc.blurb)}</p>
+    ${KEYS_HELP}
+    ${local ? "" : `<p class="small">${esc(disc.license)} · <a href="${esc(disc.source)}" rel="noopener">Disc image</a> ·
+      <a href="harness.html?bundle=${encodeURIComponent(disc.bundle)}">Test harness</a></p>`}`;
+  $("where").textContent = disc.title;
+}
+label();
 
 // What the status display calls each domain of the DVD virtual machine.
 const DOMAINS = { 1: "First play", 2: "Title", 4: "Main menu", 8: "Title set menu" };
@@ -196,17 +209,25 @@ const log = (msg) => {
   el.scrollTop = el.scrollHeight;
 };
 
-const player = createPlayer(
+let player = null;
+let ready = false;
+const load = (source) => (player = createPlayer(
   { video: $("video"), overlay: $("overlay") },
-  { bundle: disc.bundle },
+  source,
   {
     ready: () => {
+      ready = true;
       $("insert").classList.remove("loading");
       $("cta").textContent = "Play";
     },
     log,
     error: (message) => {
-      if (/HTTP|fetch/i.test(message)) $("where").textContent = "Couldn't read the disc";
+      if (local && !ready) {
+        $("cta").textContent = `Couldn't read that disc (${message.replace(/^Error: /, "")}). Choose another folder.`;
+        player?.terminate();
+        player = null;
+        $("insert").classList.remove("loading");
+      } else if (/HTTP|fetch/i.test(message)) $("where").textContent = "Couldn't read the disc";
     },
     stats: (text) => ($("stats").textContent = text),
     widescreen: (wide) => $("screen").classList.toggle("wide", wide),
@@ -223,10 +244,73 @@ const player = createPlayer(
         `SPRM ${hex(st.sprm)}<br>GPRM ${hex(st.gprm)}`;
     },
   },
-);
+));
+
+if (!local) load({ bundle: disc.bundle });
+else {
+  $("insert").classList.remove("loading");
+  $("insert").setAttribute("aria-label", "Choose a DVD");
+  $("cta").textContent = "Choose a DVD’s folder (the one holding VIDEO_TS, or VIDEO_TS itself), or drop it here";
+}
+
+// A local disc: the files of a chosen or dropped folder, with their paths.
+function insertLocal(files) {
+  if (!files.length) return;
+  const top = files[0].path.includes("/") ? files[0].path.split("/")[0] : "those files";
+  const named = /^(VIDEO_TS|those files)$/i.test(top) ? null : top;
+  if (!files.some((f) => /(^|\/)VIDEO_TS\.IFO$/i.test(f.path))) {
+    $("cta").textContent = `There’s no VIDEO_TS.IFO in “${top}”. Choose a DVD’s folder, or its VIDEO_TS folder.`;
+    return;
+  }
+  disc.title = named ? named.replace(/[._]+/g, " ").trim() : "Your DVD";
+  label();
+  $("insert").classList.add("loading");
+  $("insert").setAttribute("aria-label", "Play");
+  $("cta").textContent = "Loading…";
+  load({ files });
+}
+const picker = Object.assign(document.createElement("input"), { type: "file", webkitdirectory: true, hidden: true });
+picker.addEventListener("change", () => {
+  insertLocal([...picker.files].map((file) => ({ path: file.webkitRelativePath || file.name, file })));
+  picker.value = "";
+});
+document.body.append(picker);
+
+// Every file under the dropped entries.
+async function walk(entries) {
+  const out = [];
+  const visit = async (e) => {
+    if (e.isFile) out.push({ path: e.fullPath.replace(/^\//, ""), file: await new Promise((ok, fail) => e.file(ok, fail)) });
+    else if (e.isDirectory) {
+      const reader = e.createReader();
+      for (let batch; (batch = await new Promise((ok, fail) => reader.readEntries(ok, fail))).length; ) {
+        for (const child of batch) await visit(child);
+      }
+    }
+  };
+  for (const e of entries) await visit(e);
+  return out;
+}
+if (local) {
+  const screen = $("insert");
+  screen.addEventListener("dragover", (e) => {
+    if (player) return;
+    e.preventDefault();
+    screen.classList.add("dragging");
+  });
+  screen.addEventListener("dragleave", () => screen.classList.remove("dragging"));
+  screen.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    screen.classList.remove("dragging");
+    if (player) return;
+    const entries = [...e.dataTransfer.items].map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
+    insertLocal(await walk(entries));
+  });
+}
 
 let started = false;
 $("insert").addEventListener("click", () => {
+  if (local && !player) return picker.click();
   if ($("insert").classList.contains("loading") || started) return;
   started = true;
   // Leave the main thread to the player: nothing else moves while it runs.

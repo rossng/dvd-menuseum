@@ -2,8 +2,8 @@
 //!
 //! Driven by web/player-worker.js:
 //!
-//! 1. `mm_add_ifo` for every IFO, `mm_declare_vobs` for every menu VOB set
-//!    in the bundle, then `mm_start`.
+//! 1. `mm_add_ifo` for every IFO, `mm_declare_vobs` for every VOB set the
+//!    host has (a bundle's menus, or a whole disc's), then `mm_start`.
 //! 2. `mm_step(presented_ms)`; on 1 (need data), `mm_wanted` lists the chunks
 //!    to fetch, each supplied with `mm_put_chunk`.
 //! 3. `mm_next_output` until it returns 0: each output's JSON metadata is in
@@ -69,8 +69,10 @@ fn parse_vobs(s: &str) -> Option<Vobs> {
     if s == "vmgm" {
         return Some(Vobs::Vmgm);
     }
-    let n: u8 = s.strip_prefix("menu-")?.parse().ok()?;
-    Some(Vobs::Menu(n))
+    if let Some(n) = s.strip_prefix("menu-") {
+        return Some(Vobs::Menu(n.parse().ok()?));
+    }
+    Some(Vobs::Title(s.strip_prefix("title-")?.parse().ok()?))
 }
 
 fn vobs_id(v: Vobs) -> String {
@@ -148,7 +150,9 @@ pub unsafe extern "C" fn mm_add_ifo(kind: u32, ptr: *const u8, len: usize) -> i3
     })
 }
 
-/// Declare a menu VOB set of `sectors` sectors; the id is "vmgm" or "menu-N".
+/// Declare a VOB set of `sectors` sectors; the id is "vmgm", "menu-N" or
+/// "title-N" (the film: `VTS_NN_1..9.VOB` end to end). A VOB set that isn't
+/// declared plays as stripped.
 ///
 /// # Safety
 /// `ptr`/`len` must describe readable memory.
