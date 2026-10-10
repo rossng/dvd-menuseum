@@ -1766,6 +1766,10 @@ pub struct StreamDecoder {
     pending_field_tag: u64,
     /// Number of pictures skipped because they failed to decode.
     pub errors: u32,
+    /// Where the search for the end of the incomplete unit at the start of
+    /// `buf` resumes: every 4-byte window starting before this offset has
+    /// been searched already.
+    scanned: usize,
 }
 
 impl std::fmt::Debug for StreamDecoder {
@@ -1798,11 +1802,17 @@ impl StreamDecoder {
         self.tags.push((self.buf.len(), tag));
         self.buf.extend_from_slice(data);
         let mut offset = 0usize;
+        let mut resume = std::mem::take(&mut self.scanned);
         while let Some(rel) = find_picture_or_sequence_start_code(&self.buf[offset..]) {
             let code_start = offset + rel;
+            // A picture arrives over many pushes; search only the bytes
+            // that are new since the last one.
+            let from = if code_start == 0 { resume.max(4) } else { 4 };
+            resume = 0;
             // Only act once the unit is terminated by a following start code.
-            let Some(boundary) = find_next_picture_boundary(&self.buf[code_start + 4..]).map(|p| p + 4) else {
+            let Some(boundary) = find_next_picture_boundary(&self.buf[code_start + from..]).map(|p| p + from) else {
                 offset = code_start;
+                self.scanned = self.buf.len().saturating_sub(3).saturating_sub(code_start).max(4);
                 break;
             };
             let next_offset = code_start + boundary;
@@ -1835,6 +1845,7 @@ impl StreamDecoder {
         }
         self.buf.clear();
         self.tags.clear();
+        self.scanned = 0;
         if let Some(held) = self.held.take() {
             out.push(held);
         }

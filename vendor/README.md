@@ -10,7 +10,9 @@ From crates.io (MIT, https://github.com/OxideAV/oxideav-mpeg12video). Local chan
   each picture once the start code that ends it is in, emits frames in display order
   as soon as the reorder allows, and skips (counts) pictures that fail. Each push
   carries a tag, and every frame comes out with the tag of the push holding its
-  picture, so callers can time frames by the access unit they came from.
+  picture, so callers can time frames by the access unit they came from. The
+  search for the start code that ends a picture resumes where the previous
+  push left it, rather than rescanning the whole picture on every push.
 - `mpeg2_dct_coeff`: DCT coefficient codewords are looked up in decode tables
   built from Tables B-14/B-15 on first use, instead of scanning every row of
   every codeword width for each coefficient (which was about 70% of decode
