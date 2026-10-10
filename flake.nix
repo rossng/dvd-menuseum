@@ -48,13 +48,13 @@
             pkgs.pkg-config
             pkgs.libdvdread
 
-            # scripts/: bundles.py, fetch_discs.py, difftest.py, looks.py, notices.py, serve.py, dev.sh
+            # scripts/: bundles.py, fetch_discs.py, difftest.py, looks.py, notices.py, dev.sh
             pkgs.python3
             pkgs.zstd
             pkgs.curl
             pkgs.git-lfs
 
-            # scripts/wasm-smoke.mjs
+            # web/, scripts/wasm-smoke.mjs and site-smoke.mjs
             pkgs.nodejs
 
             # Reference decoder for checking the media crate's output.

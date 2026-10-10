@@ -10,8 +10,8 @@
 //   --chrome  the browser (default $CHROME, else the usual install places)
 
 import { spawn } from "node:child_process";
-import { createReadStream, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
-import { createServer } from "node:http";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -24,33 +24,13 @@ if (!existsSync(path.join(dir, "index.html"))) {
   process.exit(2);
 }
 
-// ---- a static server that answers range requests, as GitHub Pages does
+// ---- the site, served as `astro preview` serves it (answering range requests)
 
-const TYPES = {
-  ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
-  ".wasm": "application/wasm", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".woff": "font/woff",
-};
-const server = createServer((req, res) => {
-  let rel = decodeURIComponent(new URL(req.url, "http://x").pathname);
-  if (!rel.startsWith(base)) return res.writeHead(404).end();
-  rel = rel.slice(base.length);
-  let file = path.join(dir, rel);
-  if (!file.startsWith(dir)) return res.writeHead(404).end();
-  if (existsSync(file) && statSync(file).isDirectory()) file = path.join(file, "index.html");
-  if (!existsSync(file)) return res.writeHead(404).end();
-  const size = statSync(file).size;
-  const type = TYPES[path.extname(file)] ?? "application/octet-stream";
-  const m = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range ?? "");
-  if (!m) {
-    res.writeHead(200, { "Content-Type": type, "Content-Length": size, "Accept-Ranges": "bytes" });
-    return createReadStream(file).pipe(res);
-  }
-  const start = Number(m[1]), end = Math.min(m[2] ? Number(m[2]) : size - 1, size - 1);
-  res.writeHead(206, { "Content-Type": type, "Content-Length": end - start + 1, "Content-Range": `bytes ${start}-${end}/${size}` });
-  createReadStream(file, { start, end }).pipe(res);
-});
-await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
-const origin = `http://127.0.0.1:${server.address().port}`;
+const web = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../web");
+const { preview } = await import(createRequire(path.join(web, "package.json")).resolve("astro"));
+process.env.BASE_PATH = base; // read by astro.config.mjs
+const server = await preview({ root: web, outDir: dir, server: { host: "127.0.0.1", port: 0 }, logLevel: "warn" });
+const origin = `http://127.0.0.1:${server.port}`;
 
 // ---- Chrome, driven over the DevTools protocol
 
@@ -164,7 +144,7 @@ for (const page of pages) {
 const exited = new Promise((ok) => chrome.once("exit", ok));
 chrome.kill();
 await exited;
-server.close();
+await server.stop();
 rmSync(profile, { recursive: true, force: true, maxRetries: 5 });
 console.log(failed ? `${failed} of ${pages.length} pages failed` : `all ${pages.length} pages ok`);
 process.exit(failed ? 1 : 0);
