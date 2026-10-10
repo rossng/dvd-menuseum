@@ -7,3 +7,7 @@ target/
 web/pkg/
 __pycache__/
 .DS_Store
+
+# CI: the LFS object list (pages.yml) and the assembled site
+.lfs-objects
+_site/

@@ -1,0 +1,67 @@
+{
+  "_comment": "The discs on the site, in shelf order. scripts/site.py joins these with their bundles (fixtures/bundles/<slug>/) and samples each label's colours from the disc's menu: `menu` holds `menuseum render` options (inputs, NAV packs to settle) for discs whose first menu isn't the one to sample.",
+  "discs": [
+    {
+      "slug": "sita-sings-the-blues-pal",
+      "title": "Sita Sings the Blues",
+      "year": 2008,
+      "maker": "Nina Paley",
+      "system": "PAL",
+      "license": "CC BY-SA 3.0",
+      "source": "https://archive.org/details/SitaSingsTheBluesPalDvdImage",
+      "blurb": "Nina Paley's animated Ramayana, set to 1920s jazz recordings."
+    },
+    {
+      "slug": "elephants-dream-pal",
+      "title": "Elephants Dream",
+      "year": 2006,
+      "maker": "Orange Open Movie Project",
+      "system": "PAL",
+      "license": "CC BY 2.5",
+      "source": "https://archive.org/details/elephans-dream-iso",
+      "blurb": "The official disc of the first Blender open movie. Nine title sets and a long motion menu.",
+      "menu": { "inputs": "activate" }
+    },
+    {
+      "slug": "nina-vision",
+      "title": "Nina Vision",
+      "year": 2011,
+      "maker": "Nina Paley",
+      "system": "NTSC",
+      "license": "CC BY-SA 3.0",
+      "source": "https://archive.org/details/NinaVisionDVD",
+      "blurb": "Six short films by Nina Paley. Authored by hand by Terry Hancock, with a looping motion menu."
+    },
+    {
+      "slug": "av-calibration-pal",
+      "title": "AV Calibration",
+      "year": null,
+      "maker": "Beta 1",
+      "system": "PAL",
+      "license": "CC BY-NC-SA 3.0",
+      "source": "https://archive.org/details/AvCalibrationPalDvd",
+      "blurb": "Test patterns and tones for setting up a TV and speakers."
+    },
+    {
+      "slug": "elephants-dream-ntsc",
+      "title": "Elephants Dream",
+      "year": 2006,
+      "maker": "Orange Open Movie Project",
+      "system": "NTSC",
+      "license": "CC BY 2.5",
+      "source": "https://archive.org/details/elephans-dream-iso",
+      "blurb": "The NTSC disc of the official release.",
+      "menu": { "inputs": "activate" }
+    },
+    {
+      "slug": "av-calibration-ntsc",
+      "title": "AV Calibration",
+      "year": null,
+      "maker": "Beta 1",
+      "system": "NTSC",
+      "license": "CC BY-NC-SA 3.0",
+      "source": "https://archive.org/details/AvCalibrationNtscDvd",
+      "blurb": "The NTSC version of the calibration disc."
+    }
+  ]
+}

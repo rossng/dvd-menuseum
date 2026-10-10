@@ -1,0 +1,87 @@
+name: Pages
+
+# Builds the site (scripts/site.py) and deploys it to GitHub Pages. In the
+# repository settings, set Pages → Source to "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push supersedes a queued one but never
+# interrupts one in progress.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      # The bundles are ~460 MB of LFS objects, against a free quota of 1 GB
+      # of LFS bandwidth a month, so keep them in the Actions cache and only
+      # download when an archive changes.
+      - name: List LFS objects
+        run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-objects
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-objects') }}
+          restore-keys: lfs-
+      - name: Fetch bundles
+        run: |
+          git lfs pull
+          python3 scripts/bundles.py unpack
+
+      - name: Install Rust
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build the wasm player and the CLI
+        run: |
+          cargo build --release --locked -p menuseum-wasm --target wasm32-unknown-unknown
+          mkdir -p web/pkg
+          cp target/wasm32-unknown-unknown/release/menuseum_wasm.wasm web/pkg/
+          cargo build --release --locked -p menuseum-cli
+
+      # Label colours are sampled from the menus; cached by bundle and render options.
+      - name: Restore label cache
+        uses: actions/cache@v4
+        with:
+          path: target/palettes
+          key: palettes-${{ hashFiles('.lfs-objects', 'web/discs.json') }}
+          restore-keys: palettes-
+
+      - name: Assemble the site
+        run: |
+          python3 scripts/site.py --copy --out _site
+          size=$(du -sm _site | cut -f1)
+          echo "Site is ${size} MB"
+          # GitHub Pages sites are limited to 1 GB.
+          if [ "$size" -gt 950 ]; then echo "::error::the site is ${size} MB, over the Pages limit"; exit 1; fi
+          if [ "$size" -gt 800 ]; then echo "::warning::the site is ${size} MB, nearing the 1 GB Pages limit"; fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

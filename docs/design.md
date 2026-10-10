@@ -45,7 +45,9 @@ crates/
   wasm/    The player for the browser, plain C ABI, run in a Web Worker.
 vendor/    oxideav-mpeg12video with StreamDecoder.
 oracle/    libdvdnav built from source, with the same trace format.
-web/       Bare test harness: canvas video + overlay, Web Audio, input.
+web/       The website (scripts/site.py assembles it with the bundles): the disc
+           shelf, the player page and the test harness, sharing player.js
+           (canvas video + overlay, Web Audio, input).
 ```
 
 The engine is a VOBU-granular port of libdvdnav's VM and block loop, kept in its own crate behind the `Navigator` trait so that only it and the programs that link it are GPL. It asks a `NavSource` for NAV packs. A sector that hasn't arrived yet is *pending*, so the browser can stream a bundle with HTTP range requests. A missing title VOB set is *stripped*, and the engine skips its cells.

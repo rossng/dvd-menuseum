@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menuseum harness</title>
+<style>
+  :root { color-scheme: dark; --fg: #ddd; --muted: #888; --bg: #111; --panel: #1b1b1b; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  #layout { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  #screen { position: relative; width: min(960px, 100%); aspect-ratio: 4 / 3; background: #000; cursor: pointer; }
+  #screen.wide { aspect-ratio: 16 / 9; }
+  #screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #placeholder { position: absolute; inset: 0; display: none; place-items: center; text-align: center; white-space: pre-line; color: var(--muted); background: #000; }
+  #start { position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px; background: #000c; }
+  #side { flex: 1 1 320px; min-width: 0; }
+  #side section { background: var(--panel); padding: 8px; margin-bottom: 8px; overflow-wrap: anywhere; }
+  #log { height: 220px; overflow: auto; white-space: pre; color: var(--muted); }
+  kbd { border: 1px solid #444; padding: 0 3px; }
+  label { display: inline-flex; gap: 4px; margin-right: 12px; }
+</style>
+</head>
+<body>
+<div id="layout">
+  <div id="screen">
+    <canvas id="video"></canvas>
+    <canvas id="overlay"></canvas>
+    <div id="placeholder"></div>
+    <div id="start">Loading…</div>
+  </div>
+  <div id="side">
+    <section>
+      <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> activate · <kbd>Esc</kbd> escape/resume ·
+      <kbd>T</kbd> title menu · <kbd>R</kbd> root menu · <kbd>C</kbd> chapter menu · mouse hover/click
+      <div style="margin-top:6px">
+        <label><input type="checkbox" id="rects"> button rects</label>
+        <label><input type="checkbox" id="compat"> libdvdnav quirks</label>
+      </div>
+    </section>
+    <section id="state"></section>
+    <section id="stats"></section>
+    <section id="log"></section>
+  </div>
+</div>
+<script type="module">
+import { createPlayer, KEYS } from "./player.js";
+
+const params = new URLSearchParams(location.search);
+const bundle = params.get("bundle");
+const $ = (id) => document.getElementById(id);
+const log = (msg) => {
+  $("log").textContent += msg + "\n";
+  $("log").scrollTop = $("log").scrollHeight;
+};
+if (!bundle) {
+  $("start").textContent = "Add ?bundle=<url of a bundle directory>";
+  throw new Error("no bundle");
+}
+
+const hex = (a) => a.map((v) => v.toString(16).padStart(4, "0")).join(" ");
+const player = createPlayer(
+  { video: $("video"), overlay: $("overlay") },
+  { bundle, seed: Number(params.get("seed") ?? 0), compat: params.get("compat") === "1" },
+  {
+    ready: (provider) => ($("start").textContent = `Click to start (${provider || "untitled disc"})`),
+    log,
+    stats: (text) => ($("stats").textContent = text),
+    widescreen: (wide) => $("screen").classList.toggle("wide", wide),
+    placeholder: (text) => {
+      $("placeholder").style.display = text ? "grid" : "none";
+      if (text) $("placeholder").textContent = text;
+    },
+    state: (st) => {
+      const dom = { 1: "FP", 2: "TT", 4: "VMGM", 8: "VTSM" }[st.domain];
+      $("state").innerHTML =
+        `domain ${dom} · vts ${st.vts} · pgc ${st.pgc} · pg ${st.pg} · cell ${st.cell} · button ${st.button}<br>` +
+        `SPRM ${hex(st.sprm)}<br>GPRM ${hex(st.gprm)}`;
+    },
+  },
+);
+
+addEventListener("keydown", (e) => {
+  const k = KEYS[e.key];
+  if (k) {
+    player.input(...k);
+    e.preventDefault();
+  }
+});
+$("overlay").addEventListener("mousemove", (e) => player.input("pointer", ...player.pictureCoords(e)));
+$("overlay").addEventListener("click", (e) => player.input("click", ...player.pictureCoords(e)));
+$("rects").addEventListener("change", () => player.showRects($("rects").checked));
+
+$("compat").checked = params.get("compat") === "1";
+$("compat").disabled = true; // fixed for the session: reload with ?compat=1 to change
+$("start").addEventListener("click", () => {
+  $("start").remove();
+  player.start();
+}, { once: true });
+</script>
+</body>
+</html>
