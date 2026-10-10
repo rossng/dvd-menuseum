@@ -46,6 +46,14 @@ jobs:
       - name: Install Rust
         run: rustup show
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the site's dependencies
+        run: npm ci
+        working-directory: web
 
       - name: Build the wasm player and the CLI
         run: |
@@ -62,7 +70,12 @@ jobs:
           key: palettes-${{ hashFiles('.lfs-objects', 'web/discs.json') }}
           restore-keys: palettes-
 
-      - name: Assemble the site
+      # The site's base path: /<repository>/ on a project site.
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Build the site
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
         run: |
           python3 scripts/site.py --copy --out _site
           size=$(du -sm _site | cut -f1)
@@ -71,7 +84,6 @@ jobs:
           if [ "$size" -gt 950 ]; then echo "::error::the site is ${size} MB, over the Pages limit"; exit 1; fi
           if [ "$size" -gt 800 ]; then echo "::warning::the site is ${size} MB, nearing the 1 GB Pages limit"; fi
 
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

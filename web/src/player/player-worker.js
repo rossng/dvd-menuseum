@@ -13,7 +13,10 @@
 //                "placeholder" | "flush" | "state" | "stopped" | "error", ...}
 //               {type: "ready"} {type: "log", message}
 
+import wasm from "../../pkg/menuseum_wasm.wasm?url"; // built by scripts/dev.sh
+
 const KINDS = [null, "frame", "audio", "subpicture", "buttons", "still", "placeholder", "flush", "state", "stopped", "error"];
+
 const INPUTS = { up: 0, down: 1, left: 2, right: 3, activate: 4, select: 5, menu: 6, pointer: 7, click: 8 };
 const MENUS = { escape: 0, title: 1, root: 2, subpicture: 3, audio: 4, angle: 5, part: 6 };
 
@@ -24,7 +27,7 @@ let running = false;
 let wake = null;
 const inflight = new Set();
 
-const ready = WebAssembly.instantiateStreaming(fetch("pkg/menuseum_wasm.wasm"), {}).then(({ instance }) => {
+const ready = WebAssembly.instantiateStreaming(fetch(wasm), {}).then(({ instance }) => {
   x = instance.exports;
 });
 

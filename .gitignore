@@ -11,3 +11,9 @@ __pycache__/
 # CI: the LFS object list (pages.yml) and the assembled site
 .lfs-objects
 _site/
+
+# web/: dependencies, the catalog scripts/site.py writes, and Astro's caches
+web/node_modules/
+web/src/catalog.json
+web/dist/
+web/.astro/

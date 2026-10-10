@@ -1,0 +1,28 @@
+---
+// Every page of the site: the head, the aurora behind the page and the footer.
+import "../styles/site.css";
+import Aurora from "../components/Aurora.astro";
+import Footer from "../components/Footer.astro";
+import { url } from "../lib/site.js";
+
+const { title = "Menuseum", description = "An archive of interactive DVD menus." } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<meta name="description" content={description}>
+<link rel="icon" href={url("favicon.svg")} type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap">
+<slot name="head" />
+</head>
+<body>
+<Aurora />
+<slot />
+<Footer />
+</body>
+</html>

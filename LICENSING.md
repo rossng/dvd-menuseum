@@ -27,9 +27,9 @@ Whoever distributes them must offer the corresponding source and pass on the
 notices of what they contain: the licences in this repository and the MIT
 notices of the oxideav crates (`oxideav-core`, `oxideav-ac3`, `oxideav-dts`,
 `oxideav-mp2` and the vendored `oxideav-mpeg12video`, all Copyright (c) 2026
-Karpelès Lab Inc.). The web player lists them in [web/NOTICE.md](web/NOTICE.md),
-and the site's Licences dialog links the source of the commit it was built from
-(`scripts/site.py` records it in `catalog.json`).
+Karpelès Lab Inc.). The web player lists them in [web/public/NOTICE.md](web/public/NOTICE.md),
+and the Licences dialog in every page's footer links the source of the commit
+the site was built from (`scripts/site.py` records it in the catalog).
 
 Only the web player is distributed so far. A release of the `menuseum` binary
 would need the same notices shipped beside it.

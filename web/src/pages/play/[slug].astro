@@ -1,0 +1,10 @@
+---
+// A page for each disc in the catalog.
+import Player from "../../components/Player.astro";
+import { discs } from "../../lib/site.js";
+
+export function getStaticPaths() {
+  return discs.map((disc) => ({ params: { slug: disc.slug }, props: { disc } }));
+}
+---
+<Player disc={Astro.props.disc} />

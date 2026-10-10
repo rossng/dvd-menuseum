@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
-"""Assemble the website: web/ plus the bundles listed in web/discs.json, and
-catalog.json describing them, including colours sampled from each disc's
-menu for its printed label.
+"""Build the website: write web/src/catalog.json describing the discs listed
+in web/discs.json, including colours sampled from each disc's menu for its
+printed label; build the pages from it (astro build); and place the bundles
+beside them.
 
-usage: scripts/site.py [--out DIR] [--copy] [--menuseum PATH]
+usage: scripts/site.py [--out DIR] [--copy] [--menuseum PATH] [--catalog-only]
 
-  --out DIR        where to assemble the site (default target/site)
-  --copy           copy files rather than symlinking them (for deployment;
-                   symlinks keep local edits to web/ live)
+  --out DIR        where to build the site (default target/site)
+  --copy           copy the bundles rather than symlinking them (for deployment)
   --menuseum PATH  the CLI that renders menus (default target/release/menuseum)
+  --catalog-only   only write the catalog (for `npm run dev` in web/)
 
-Expects the bundles extracted (scripts/bundles.py) and web/pkg/ built
-(scripts/dev.sh --build-only). Palettes are cached in target/palettes/,
-keyed on the bundle and render options, so only changed discs are re-rendered.
+Expects the bundles extracted (scripts/bundles.py), web/pkg/ built
+(scripts/dev.sh --build-only) and web/node_modules installed (npm ci).
+Palettes are cached in target/palettes/, keyed on the bundle and render
+options, so only changed discs are re-rendered. The base path the site is
+served under comes from $BASE_PATH (default /).
 
-DIR/
-  index.html, play.html, ...   from web/
-  bundles/<slug>/              the menu bundles the player streams
-  catalog.json                 web/discs.json joined with bundle facts, and
+web/src/catalog.json           web/discs.json joined with bundle facts, and
                                `source`, the commit the site was built from
                                (the GPL source offer for the player)
+DIR/
+  index.html, play/<slug>/ ... the pages
+  bundles/<slug>/              the menu bundles the player streams
 """
 
 import argparse
@@ -39,7 +42,7 @@ WEB = ROOT / "web"
 BUNDLES = ROOT / "fixtures" / "bundles"
 PALETTE_CACHE = ROOT / "target" / "palettes"
 REPO = "https://github.com/rossng/dvd-menuseum"
-SKIP = {"discs.json"}  # web/ sources that aren't served as-is
+CATALOG = WEB / "src" / "catalog.json"
 
 
 def place(src, dst, copy):
@@ -153,7 +156,24 @@ def main():
     ap.add_argument("--out", type=Path, default=ROOT / "target" / "site")
     ap.add_argument("--copy", action="store_true")
     ap.add_argument("--menuseum", type=Path, default=ROOT / "target" / "release" / "menuseum")
+    ap.add_argument("--catalog-only", action="store_true")
     args = ap.parse_args()
+
+    discs = json.loads((WEB / "discs.json").read_text())["discs"]
+    catalog = []
+    for disc in discs:
+        slug = disc["slug"]
+        bundle = BUNDLES / slug
+        if not (bundle / "bundle.json").exists():
+            raise SystemExit(f"{slug}: no bundle at {bundle}: run scripts/bundles.py")
+        entry = {k: v for k, v in disc.items() if k != "menu"}
+        entry.update(facts(bundle), bundle=f"bundles/{slug}/", palette=menu_palette(args.menuseum, slug, bundle, disc.get("menu", {})))
+        catalog.append(entry)
+    text = json.dumps({"source": source(), "discs": catalog}, indent=2) + "\n"
+    if not CATALOG.exists() or CATALOG.read_text() != text:  # unchanged, a dev server needn't reload
+        CATALOG.write_text(text)
+    if args.catalog_only:
+        return
 
     if not (WEB / "pkg" / "menuseum_wasm.wasm").exists():
         raise SystemExit("web/pkg/menuseum_wasm.wasm is missing: run scripts/dev.sh --build-only")
@@ -165,23 +185,10 @@ def main():
             shutil.rmtree(old)
         else:
             old.unlink()
-    for src in sorted(WEB.iterdir()):
-        if src.name not in SKIP and not src.name.startswith("."):
-            place(src, out / src.name, args.copy)
-
-    discs = json.loads((WEB / "discs.json").read_text())["discs"]
+    subprocess.run(["npm", "run", "--silent", "build", "--", "--outDir", str(out)], cwd=WEB, check=True)
     (out / "bundles").mkdir()
-    catalog = []
     for disc in discs:
-        slug = disc["slug"]
-        bundle = BUNDLES / slug
-        if not (bundle / "bundle.json").exists():
-            raise SystemExit(f"{slug}: no bundle at {bundle}: run scripts/bundles.py")
-        place(bundle, out / "bundles" / slug, args.copy)
-        entry = {k: v for k, v in disc.items() if k != "menu"}
-        entry.update(facts(bundle), bundle=f"bundles/{slug}/", palette=menu_palette(args.menuseum, slug, bundle, disc.get("menu", {})))
-        catalog.append(entry)
-    (out / "catalog.json").write_text(json.dumps({"source": source(), "discs": catalog}, indent=2) + "\n")
+        place(BUNDLES / disc["slug"], out / "bundles" / disc["slug"], args.copy)
     total = sum(d["bytes"] for d in catalog)
     print(f"site: {len(catalog)} discs, {total / 1e6:.0f} MB of menus, in {os.path.relpath(out)}", file=sys.stderr)
 

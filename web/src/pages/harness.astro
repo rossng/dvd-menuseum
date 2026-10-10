@@ -1,10 +1,14 @@
+---
+// The test harness: a bare player for any bundle (?bundle=<url>), with the
+// virtual machine's state and libdvdnav's quirks switchable (?compat=1).
+---
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Menuseum harness</title>
-<style>
+<style is:global>
   :root { color-scheme: dark; --fg: #ddd; --muted: #888; --bg: #111; --panel: #1b1b1b; }
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, Menlo, monospace; }
   #layout { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
@@ -42,8 +46,8 @@
     <section id="log"></section>
   </div>
 </div>
-<script type="module">
-import { createPlayer, KEYS } from "./player.js";
+<script>
+import { createPlayer, KEYS } from "../player/player.js";
 
 const params = new URLSearchParams(location.search);
 const bundle = params.get("bundle");

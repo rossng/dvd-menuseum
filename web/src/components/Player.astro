@@ -1,0 +1,174 @@
+---
+// The player page: the deck (screen, status display, remote) and the disc's
+// details. `disc` is a catalog entry, or omitted for `local`: a DVD from the
+// viewer's own computer, chosen or dropped on the screen and read in place.
+import Base from "../layouts/Base.astro";
+import { discMarkup } from "../lib/disc.js";
+import { url, harnessUrl, licenceDeed } from "../lib/site.js";
+
+const local = !Astro.props.disc;
+const disc = Astro.props.disc ?? { slug: "local", title: "Your DVD", blurb: "A DVD from your computer. It plays from your own files; nothing is uploaded." };
+const by = [disc.maker, disc.year].filter(Boolean).join(", ");
+const deed = licenceDeed(disc.license);
+---
+<Base title={`${disc.title} · Menuseum`} description={disc.blurb}>
+<style is:global>
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1000px; margin: 0 auto; padding: 18px 16px 14px; }
+  .top .wordmark { font-size: clamp(1.5rem, 5vw, 2rem); }
+  main { max-width: 1000px; margin: 0 auto; padding: 0 16px 32px; }
+
+  /* The deck: black gloss around the screen, with a control bar lit from below. */
+  .deck {
+    border-radius: 10px; overflow: hidden; border: 1px solid #000;
+    background: linear-gradient(180deg, #2b3138 0%, #11151a 3%, #050608 100%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14), 0 18px 50px rgb(0 0 0 / 0.5);
+  }
+  .screen { position: relative; width: 100%; aspect-ratio: 4 / 3; max-height: 72vh; margin: 0 auto; background: #000; }
+  .screen.wide { aspect-ratio: 16 / 9; }
+  .screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .screen #overlay { cursor: pointer; }
+  .screen .notice {
+    position: absolute; inset: 0; display: none; place-items: center; padding: 16px; text-align: center; white-space: pre-line;
+    color: var(--text-dim); background: radial-gradient(circle, #0b2a4a, #000);
+  }
+  .insert { /* before playback: the disc, and a play button */
+    position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 22px; width: 100%; padding: 0; border: 0;
+    cursor: pointer; color: var(--text-dim); font-size: 0.95rem;
+    background: radial-gradient(ellipse at 50% 100%, #0f4f8a 0%, #04172c 55%, #000 100%);
+    transition: opacity 0.5s;
+  }
+  .insert .disc { --size: min(46vmin, 250px); transition: transform 0.6s cubic-bezier(0.5, 0, 0.8, 0.4); }
+  .insert.going { opacity: 0; }
+  .insert.going .disc { transform: scale(0.3); }
+  .insert .orb { width: 56px; height: 56px; pointer-events: none; }
+  .insert.loading .orb { filter: grayscale(1) brightness(0.6); }
+  .insert.dragging { box-shadow: inset 0 0 0 3px var(--glow); }
+  #insert-disc { display: contents; }
+  #cta { max-width: 36em; padding: 0 16px; }
+
+  .bar {
+    position: relative; padding: 10px 14px 14px; border-top: 1px solid #000;
+    background:
+      radial-gradient(ellipse 60% 120% at 50% 110%, rgb(40 140 230 / 0.45), transparent 70%),
+      linear-gradient(180deg, #1e252d 0%, #0b0e12 50%, #040507 51%, #0a0d11 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+  .status { /* the recessed now-playing display */
+    display: flex; gap: 12px; align-items: baseline; justify-content: space-between; margin: 0 auto 12px; max-width: 520px;
+    padding: 5px 14px; border-radius: 4px; font-size: 0.85rem; color: #bfe7ff; white-space: nowrap; overflow: hidden;
+    background: linear-gradient(180deg, #02070c, #0a1c2c); border: 1px solid #000; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.8), 0 1px 0 rgb(255 255 255 / 0.1);
+  }
+  .status .where { overflow: hidden; text-overflow: ellipsis; }
+  .status .btnno { color: var(--text-faint); }
+  .controls { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; }
+  .controls .menus, .controls .extras { display: flex; flex-wrap: wrap; gap: 6px; }
+  .controls .extras { justify-content: flex-end; }
+  /* The d-pad: a black gloss ring of arrows around a blue OK orb. */
+  .dpad {
+    position: relative; width: 132px; height: 132px; border-radius: 50%; border: 1px solid #000;
+    background: radial-gradient(circle at 50% 30%, #3a424c 0%, #12161b 60%, #050608 100%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.3), 0 4px 12px rgb(0 0 0 / 0.6);
+  }
+  .dpad .arrow {
+    position: absolute; width: 40px; height: 40px; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%;
+    display: grid; place-items: center; color: #9fb4c8;
+  }
+  .dpad .arrow svg { width: 12px; height: 12px; fill: currentColor; }
+  .dpad .arrow:hover { color: #fff; filter: drop-shadow(0 0 6px var(--glow)); }
+  .dpad .arrow:active { transform: scale(0.9); }
+  .dpad .up { left: 45px; top: 2px; } .dpad .down { left: 45px; bottom: 2px; }
+  .dpad .left { left: 2px; top: 45px; } .dpad .right { right: 2px; top: 45px; }
+  .dpad .orb { position: absolute; left: 36px; top: 36px; width: 58px; height: 58px; color: #fff; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-shadow: 0 1px 1px #000; }
+  .dpad .orb span { position: relative; }
+
+  details.more { margin-top: 12px; }
+  details.more summary { cursor: pointer; color: var(--text-faint); font-size: 0.85rem; width: max-content; }
+  details.more .panel {
+    margin-top: 8px; padding: 10px 12px; border-radius: 4px; font: 0.78rem/1.5 Consolas, "Lucida Console", monospace; color: #9fd4f5;
+    background: #02070c; border: 1px solid #000; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.8); overflow-wrap: anywhere;
+  }
+  details.more .panel div + div { margin-top: 6px; }
+  details.more #log { max-height: 160px; overflow: auto; white-space: pre; color: #6f9fbf; }
+
+  .info { margin-top: 18px; padding: 16px 22px; }
+  .info h2 { font-size: clamp(1.5rem, 4.5vw, 1.9rem); line-height: 1.2; }
+  .info p { margin: 6px 0 0; }
+  .info .byline { color: var(--text-dim); margin-top: 2px; }
+  .info .small { font-size: 0.85rem; color: var(--text-faint); }
+  .info .small a { color: var(--text-dim); }
+  kbd { font: 0.78rem Consolas, monospace; padding: 0 4px; border-radius: 3px; border: 1px solid rgb(255 255 255 / 0.3); }
+
+  @media (max-width: 720px) {
+    .controls { grid-template-columns: 1fr; justify-items: center; }
+    .controls .menus, .controls .extras { justify-content: center; }
+    .controls .dpad { order: -1; }
+  }
+</style>
+
+<div class="top">
+  <a class="wordmark" href={url()}><img class="logo" src={url("favicon.svg")} alt="">menuseum</a>
+  <a class="btn" id="eject" href={local ? url() : `${url()}#${encodeURIComponent(disc.slug)}`}><svg viewBox="0 0 10 10"><path d="M5 1.5 9 6H1zM1 7.5h8V9H1z"/></svg>Eject</a>
+</div>
+
+<main id="player" data-local={local ? "" : undefined} data-bundle={local ? undefined : url(disc.bundle)} data-title={disc.title}>
+  <section class="deck" aria-label="Player">
+    <div class="screen" id="screen">
+      <canvas id="video"></canvas>
+      <canvas id="overlay"></canvas>
+      <div class="notice" id="notice"></div>
+      <button class={local ? "insert" : "insert loading"} id="insert" aria-label={local ? "Choose a DVD" : "Play"}>
+        <span id="insert-disc" set:html={discMarkup(disc)}></span>
+        <span class="orb"><svg viewBox="0 0 10 10"><path d="M2.5 1.2 9 5 2.5 8.8z"/></svg></span>
+        <span id="cta">{local ? "Choose a DVD’s folder (the one holding VIDEO_TS, or VIDEO_TS itself), or drop it here" : "Loading…"}</span>
+      </button>
+    </div>
+
+    <div class="bar">
+      <div class="status" aria-live="polite"><span class="where" id="where">{disc.title}</span><span class="btnno" id="btn"></span></div>
+      <div class="controls">
+        <div class="menus">
+          <button class="btn" data-input="menu title" title="Title menu (T)">Title</button>
+          <button class="btn" data-input="menu root" title="Menu (R)">Menu</button>
+          <button class="btn" data-input="menu part" title="Chapters (C)">Chapters</button>
+          <button class="btn" data-input="menu escape" title="Return (Esc)">Return</button>
+        </div>
+        <div class="dpad" role="group" aria-label="Remote">
+          <button class="arrow up" data-input="up" aria-label="Up"><svg viewBox="0 0 10 10"><path d="M5 1.5 9.5 8.5H.5z"/></svg></button>
+          <button class="arrow left" data-input="left" aria-label="Left"><svg viewBox="0 0 10 10"><path d="M1.5 5 8.5.5v9z"/></svg></button>
+          <button class="orb" data-input="activate" aria-label="OK"><span>OK</span></button>
+          <button class="arrow right" data-input="right" aria-label="Right"><svg viewBox="0 0 10 10"><path d="M8.5 5 1.5 9.5v-9z"/></svg></button>
+          <button class="arrow down" data-input="down" aria-label="Down"><svg viewBox="0 0 10 10"><path d="M5 8.5 .5 1.5h9z"/></svg></button>
+        </div>
+        <div class="extras">
+          <button class="btn" id="rects" aria-pressed="false" title="Outline every button">Show buttons</button>
+        </div>
+      </div>
+      <details class="more">
+        <summary>Details</summary>
+        <div class="panel">
+          <div id="state">No state yet.</div>
+          <div id="stats"></div>
+          <div id="log"></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="info glass" id="info">
+    <h2>{disc.title}</h2>
+    {(by || disc.system) && <p class="byline">{by && `${by} `}{disc.system && <span class="tag">{disc.system}</span>}</p>}
+    <p>{disc.blurb}</p>
+    <p class="small">Arrow keys and <kbd>Enter</kbd>, or click the menu. <kbd>T</kbd> title menu, <kbd>R</kbd> menu, <kbd>C</kbd> chapters, <kbd>Esc</kbd> return.</p>
+    {!local && (
+      <p class="small">
+        {disc.credit} · {deed ? <a href={deed} rel="noopener">{disc.license}</a> : disc.license} ·
+        <a href={disc.source} rel="noopener">Disc image</a> · <a href={harnessUrl(disc)}>Test harness</a>
+      </p>
+    )}
+  </section>
+</main>
+</Base>
+
+<script>
+import "../player/page.js";
+</script>

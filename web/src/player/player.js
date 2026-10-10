@@ -20,7 +20,7 @@ export function createPlayer(els, opts, hooks = {}) {
   const yuv = yuvRenderer(video);
   const vctx = yuv ? null : video.getContext("2d"), octx = overlay.getContext("2d");
   const log = (msg) => hooks.log?.(msg);
-  const worker = new Worker(new URL("player-worker.js", import.meta.url));
+  const worker = new Worker(new URL("./player-worker.js", import.meta.url), { type: "module" });
   const actx = new AudioContext();
 
   let epoch = 0;
@@ -310,7 +310,8 @@ export function createPlayer(els, opts, hooks = {}) {
 
   worker.postMessage({
     type: "open",
-    ...(opts.files ? { files: opts.files } : { bundle: opts.bundle.endsWith("/") ? opts.bundle : opts.bundle + "/" }),
+    // The bundle's URL is resolved here, against the page, not the worker.
+    ...(opts.files ? { files: opts.files } : { bundle: new URL(opts.bundle.replace(/\/?$/, "/"), location.href).href }),
     seed: opts.seed ?? 0,
     compat: !!opts.compat,
     yuv: !!yuv,

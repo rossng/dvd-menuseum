@@ -1,0 +1,56 @@
+---
+// The footer every page ends with: the licences of everything the site
+// serves, including where the player's source is (for the GPL), and the Seal
+// of Slop.
+import { discs, source, url, licenceDeed } from "../lib/site.js";
+
+const BLUE_OAK = "https://blueoakcouncil.org/license/1.0.0";
+const GPL = "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html";
+const SEAL = `This project is 100% vibe coded and I have not reviewed the code.
+
+After seeing https://dvdmoviemenus.com/ I wished that there was an interactive archive available and thought it would be cool if we could do the entire thing client-side from the original DVD data.
+
+No guarantees or support are offered.`;
+---
+<footer>
+  <a href="#licences" id="licences-link">Licences</a>
+  <seal-of-slop size="40" text={SEAL}></seal-of-slop>
+</footer>
+
+<dialog class="glass" id="licences" aria-labelledby="licences-title">
+  <div class="bar"><h2 id="licences-title">Licences</h2><button class="close" aria-label="Close">✕</button></div>
+  <div class="body">
+    <h3>Software</h3>
+    <table>
+      <tr><td>This website</td><td><a href={BLUE_OAK} rel="noopener">Blue Oak Model License 1.0.0</a></td></tr>
+      <tr><td>DVD player (WebAssembly): <a href={source} rel="noopener">source code</a></td><td><a href={GPL} rel="noopener">GPL-2.0-or-later</a></td></tr>
+      <tr><td>&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham</td><td><a href={GPL} rel="noopener">GPL-2.0-or-later</a></td></tr>
+      <tr><td>&nbsp;&nbsp;oxideav decoders, © Karpelès Lab Inc.</td><td>MIT</td></tr>
+      <tr><td>&nbsp;&nbsp;bytemuck, memchr, itoa, thiserror, zmij, serde_core, serde_json</td><td>MIT</td></tr>
+      <tr><td><a href="https://www.rossng.eu/seal-of-slop/" rel="noopener">Seal of Slop</a></td><td><a href={BLUE_OAK} rel="noopener">Blue Oak Model License 1.0.0</a></td></tr>
+      <tr><td>Open Sans typeface</td><td><a href="https://openfontlicense.org" rel="noopener">SIL Open Font License 1.1</a></td></tr>
+    </table>
+    <p><a href={url("NOTICE.md")}>Full notices</a></p>
+    <h3>Discs</h3>
+    <p>The menus are taken from the original discs, without their films.</p>
+    <table>
+      {discs.map((d) => (
+        <tr>
+          <td><a href={d.source} rel="noopener">{d.title}</a> <span class="faint">{d.system}</span><br><span class="faint">{d.credit}</span></td>
+          <td>{licenceDeed(d.license) ? <a href={licenceDeed(d.license)} rel="noopener">{d.license}</a> : d.license}</td>
+        </tr>
+      ))}
+    </table>
+  </div>
+</dialog>
+
+<script type="module" src="https://cdn.jsdelivr.net/npm/seal-of-slop@0.1.1/dist/index.js" is:inline></script>
+<script>
+  const dialog = document.getElementById("licences");
+  dialog.querySelector(".close").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (e) => e.target === dialog && dialog.close()); // the backdrop
+  document.getElementById("licences-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    dialog.showModal();
+  });
+</script>

@@ -1,7 +1,7 @@
 /* The Menuseum look, after Windows Vista/7 and Windows Media Player 11:
    a deep blue sky crossed by aurora ribbons, smoked Aero glass with crisp
    1px highlights, light Segoe-style type, glossy black controls with blue
-   glows. Shared by index.html and play.html. */
+   glows. Shared by every page but the test harness. */
 
 :root {
   --sky-0: #01142a;
@@ -70,6 +70,11 @@ h1, h2, h3 { font-weight: 300; letter-spacing: -0.01em; margin: 0; }
 .wordmark .logo { width: 0.92em; height: 0.92em; flex: none; filter: drop-shadow(0 0 10px rgb(110 200 255 / 0.5)); }
 .dim { color: var(--text-dim); }
 .faint { color: var(--text-faint); }
+
+/* ---- footer ---- */
+
+footer { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 20px 16px 40px; font-size: 0.85rem; }
+footer a { color: var(--text-faint); }
 
 /* ---- glass ---- */
 

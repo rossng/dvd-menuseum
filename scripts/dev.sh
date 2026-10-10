@@ -1,15 +1,16 @@
 #!/bin/sh
 # Build the wasm player into web/pkg and the CLI that renders disc labels,
-# assemble the site in target/site (scripts/site.py, symlinked to web/ so
-# edits are live) and serve it:
-#   http://localhost:8000/                            the archive
-#   http://localhost:8000/play.html?disc=<slug>       one disc
-#   http://localhost:8000/harness.html?bundle=bundles/<slug>/   test harness
+# write the catalog (scripts/site.py --catalog-only) and run the site's dev
+# server, which serves the bundles from fixtures/bundles/ with the HTTP range
+# requests the player streams with:
+#   http://localhost:8000/                                  the archive
+#   http://localhost:8000/play/<slug>/                      one disc
+#   http://localhost:8000/harness/?bundle=/bundles/<slug>/  test harness
 # Bundles are extracted from their committed archives first (see
 # scripts/bundles.py; make new ones with `menuseum bundle <disc> --out
 # fixtures/bundles/<slug>` then `scripts/bundles.py pack <slug>`, and list
-# them in web/discs.json).
-# scripts/serve.py answers the HTTP range requests the player streams with.
+# them in web/discs.json). To try the site as it's deployed, build it with
+# scripts/site.py and serve target/site with scripts/serve.py.
 set -eu
 cd "$(dirname "$0")/.."
 python3 scripts/bundles.py
@@ -18,6 +19,7 @@ mkdir -p web/pkg
 cp target/wasm32-unknown-unknown/release/menuseum_wasm.wasm web/pkg/
 [ "${1:-}" = "--build-only" ] && exit 0
 cargo build --release -p menuseum-cli
-python3 scripts/site.py
-cd target/site
-exec python3 ../../scripts/serve.py "${PORT:-8000}"
+[ -d web/node_modules ] || (cd web && npm ci)
+python3 scripts/site.py --catalog-only
+cd web
+exec npx astro dev --port "${PORT:-8000}"

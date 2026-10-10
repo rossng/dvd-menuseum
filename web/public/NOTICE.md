@@ -1,9 +1,9 @@
 # Notices
 
-The DVD Menuseum player (`pkg/menuseum_wasm.wasm`) is free software under the
+The DVD Menuseum player (its WebAssembly module, `menuseum_wasm`) is free software under the
 GNU General Public License, version 2 or (at your option) any later version
 (<https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>). Its source code is
-at <https://github.com/rossng/dvd-menuseum>; the site's Licences dialog links
+at <https://github.com/rossng/dvd-menuseum>; every page's Licences dialog links
 the commit this deployment was built from. See `LICENSING.md` and `COPYING`
 there. This page and its scripts
 are under the Blue Oak Model License 1.0.0 (<https://blueoakcouncil.org/license/1.0.0>).

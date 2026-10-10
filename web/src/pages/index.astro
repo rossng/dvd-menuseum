@@ -1,16 +1,14 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Menuseum</title>
-<meta name="description" content="An archive of interactive DVD menus.">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap">
-<link rel="stylesheet" href="site.css">
-<style>
+---
+import Base from "../layouts/Base.astro";
+import { discMarkup } from "../lib/disc.js";
+import { discs, url, playUrl } from "../lib/site.js";
+
+const mb = (bytes) => (bytes >= 1e6 ? `${Math.round(bytes / 1e6)} MB` : `${Math.round(bytes / 1e3)} KB`);
+const by = (d) => [d.maker, d.year].filter(Boolean).join(", ");
+const facts = (d) => [`${mb(d.bytes)} of menus`, `${d.title_sets} title set${d.title_sets === 1 ? "" : "s"}`].join(" · ");
+---
+<Base>
+<style is:global>
   header { text-align: center; padding: clamp(32px, 7vh, 72px) 16px 0; }
   header .wordmark { font-size: clamp(2.6rem, 8vw, 4.4rem); }
   header p { margin: 10px 0 0; font-size: clamp(1rem, 2.4vw, 1.2rem); font-weight: 300; color: var(--text-dim); }
@@ -57,6 +55,7 @@
   .dots button[aria-current="true"] { background: #fff; box-shadow: 0 0 8px 1px var(--glow); }
 
   .details { display: flex; gap: 20px; align-items: center; max-width: 640px; margin: 0 auto; padding: 18px 22px; }
+  .details[hidden] { display: none; }
   .details .text { flex: 1; min-width: 0; }
   .details h2 { font-size: clamp(1.6rem, 5vw, 2.1rem); line-height: 1.15; text-shadow: 0 0 16px rgb(110 200 255 / 0.35); }
   .details .byline { margin: 4px 0 0; color: var(--text-dim); }
@@ -68,31 +67,49 @@
   .about { max-width: 640px; margin: 20px auto 0; padding: 14px 22px; }
   .about h3 { font-size: 1.05rem; font-weight: 400; }
   .about p { margin: 4px 0 0; color: var(--text-dim); }
-  footer { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 20px 16px 40px; font-size: 0.85rem; }
-  footer a { color: var(--text-faint); }
   @media (max-width: 520px) {
     .details { flex-direction: column; align-items: stretch; text-align: left; }
     .details .play { flex-direction: row; justify-content: center; }
   }
 </style>
-</head>
-<body>
+
 <header>
-  <h1 class="wordmark"><img class="logo" src="favicon.svg" alt="">menuseum</h1>
+  <h1 class="wordmark"><img class="logo" src={url("favicon.svg")} alt="">menuseum</h1>
   <p>An archive of interactive DVD menus</p>
 </header>
 
 <main>
   <section class="shelf" id="shelf" aria-roledescription="carousel" aria-label="Discs">
-    <div class="floor" aria-hidden="true"><div class="stage"><div class="ring" id="mirror"></div></div></div>
+    <div class="floor" aria-hidden="true"><div class="stage"><div class="ring" id="mirror">
+      {discs.map((d, i) => <div class="slot" style={`--i: ${i}`} set:html={discMarkup(d)} />)}
+    </div></div></div>
     <div class="horizon"></div>
-    <div class="stage"><div class="ring" id="ring"></div></div>
+    <div class="stage"><div class="ring" id="ring">
+      {discs.map((d, i) => (
+        <div class="slot" style={`--i: ${i}`} data-slug={d.slug} data-href={playUrl(d)} data-label={`${d.title} (${d.system})`} set:html={discMarkup(d)} />
+      ))}
+    </div></div>
     <button class="btn turn prev" aria-label="Previous disc"><svg viewBox="0 0 10 10"><path d="M7 1 2.5 5 7 9z"/></svg></button>
     <button class="btn turn next" aria-label="Next disc"><svg viewBox="0 0 10 10"><path d="M3 1 7.5 5 3 9z"/></svg></button>
   </section>
-  <nav class="dots" id="dots" aria-label="Choose a disc"></nav>
+  <nav class="dots" id="dots" aria-label="Choose a disc">
+    {discs.map((d) => <button aria-label={`${d.title} (${d.system})`} />)}
+  </nav>
 
-  <section class="details glass" id="details" aria-live="polite"></section>
+  <div id="details" aria-live="polite">
+    {discs.length === 0 && <section class="details glass">No discs yet.</section>}
+    {discs.map((d, i) => (
+      <section class="details glass" hidden={i !== 0}>
+        <div class="text">
+          <h2>{d.title}</h2>
+          <p class="byline">{by(d) && `${by(d)} `}<span class="tag">{d.system}</span></p>
+          <p class="blurb">{d.blurb}</p>
+          <p class="facts">{facts(d)}</p>
+        </div>
+        <a class="play" href={playUrl(d)}><span class="orb"><svg viewBox="0 0 10 10"><path d="M2.5 1.2 9 5 2.5 8.8z"/></svg></span>Play</a>
+      </section>
+    ))}
+  </div>
 
   <section class="about glass">
     <h3>About</h3>
@@ -101,72 +118,45 @@
 
   <section class="about glass">
     <h3>Your own DVD</h3>
-    <p>Have a DVD copied to your computer? <a href="play.html?disc=local">Play its VIDEO_TS folder</a>, menus and film. It plays from your own files; nothing is uploaded.</p>
+    <p>Have a DVD copied to your computer? <a href={url("play/local/")}>Play its VIDEO_TS folder</a>, menus and film. It plays from your own files; nothing is uploaded.</p>
   </section>
 </main>
+</Base>
 
-<footer>
-  <a href="#" id="licences">Licences</a>
-  <seal-of-slop size="40" text="This project is 100% vibe coded and I have not reviewed the code.
-
-After seeing https://dvdmoviemenus.com/ I wished that there was an interactive archive available and thought it would be cool if we could do the entire thing client-side from the original DVD data.
-
-No guarantees or support are offered."></seal-of-slop>
-</footer>
-
-<script type="module" src="https://cdn.jsdelivr.net/npm/seal-of-slop@0.1.1/dist/index.js"></script>
-<script type="module">
-import { discMarkup } from "./disc.js";
-import { aurora, light, licences } from "./chrome.js";
+<script>
+import { light } from "../lib/light.js";
 
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const mb = (bytes) => (bytes >= 1e6 ? `${Math.round(bytes / 1e6)} MB` : `${Math.round(bytes / 1e3)} KB`);
-const PLAY = `<svg viewBox="0 0 10 10"><path d="M2.5 1.2 9 5 2.5 8.8z"/></svg>`;
-
-aurora();
-light($("shelf"));
-const { discs, source } = await (await fetch("catalog.json")).json();
-licences($("licences"), discs, source);
 const shelf = $("shelf");
+const slots = [...$("ring").children], mirrors = [...$("mirror").children];
+const dots = [...$("dots").children], details = [...$("details").children];
+light(shelf);
 
 // Ring geometry: discs sit edge to edge, plus a gap, around a circle.
 function layout() {
   const size = shelf.querySelector(".disc")?.offsetWidth || 280;
-  const n = Math.max(discs.length, 3);
+  const n = Math.max(slots.length, 3);
   shelf.style.setProperty("--step", `${360 / n}deg`);
   shelf.style.setProperty("--radius", `${(size / 2 + size * 0.12) / Math.tan(Math.PI / n)}px`);
 }
 
 let at = 0, turn = 0, swipedAt = 0;
-const slots = [], mirrors = [];
-discs.forEach((d, i) => {
-  for (const [ring, list] of [[$("ring"), slots], [$("mirror"), mirrors]]) {
-    const slot = document.createElement("div");
-    slot.className = "slot";
-    slot.style.setProperty("--i", i);
-    slot.innerHTML = discMarkup(d);
-    ring.append(slot);
-    list.push(slot);
-  }
-  const disc = slots[i].querySelector(".disc");
+slots.forEach((slot, i) => {
+  const disc = slot.querySelector(".disc");
   disc.setAttribute("role", "button");
-  disc.setAttribute("aria-label", `${d.title} (${d.system})`);
+  disc.setAttribute("aria-label", slot.dataset.label);
   disc.addEventListener("click", () => {
     if (performance.now() - swipedAt < 300) return; // the end of a swipe, not a click
     i === at ? play() : go(i);
   });
-  const dot = document.createElement("button");
-  dot.setAttribute("aria-label", `${d.title} (${d.system})`);
-  dot.addEventListener("click", () => go(i));
-  $("dots").append(dot);
+  dots[i].addEventListener("click", () => go(i));
 });
 layout();
 addEventListener("resize", layout);
 
 // `turn` counts whole revolutions too, so the ring always takes the short way round.
 function go(i, { replace = false } = {}) {
-  const n = discs.length;
+  const n = slots.length;
   if (!n) return;
   i = ((i % n) + n) % n;
   let delta = i - at;
@@ -182,29 +172,14 @@ function go(i, { replace = false } = {}) {
     });
   }
   slots.forEach((s, j) => (s.querySelector(".disc").tabIndex = j === i ? 0 : -1));
-  [...$("dots").children].forEach((b, j) => b.setAttribute("aria-current", j === i));
-  show(discs[i]);
-  history[replace ? "replaceState" : "pushState"](null, "", `#${encodeURIComponent(discs[i].slug)}`);
+  dots.forEach((b, j) => b.setAttribute("aria-current", j === i));
+  details.forEach((d, j) => (d.hidden = j !== i));
+  history[replace ? "replaceState" : "pushState"](null, "", `#${encodeURIComponent(slots[i].dataset.slug)}`);
 }
-const href = (d) => `play.html?disc=${encodeURIComponent(d.slug)}`;
-const play = () => (location.href = href(discs[at]));
-const fromHash = () => discs.findIndex((d) => d.slug === decodeURIComponent(location.hash.slice(1)));
+const play = () => slots.length && (location.href = slots[at].dataset.href);
+const fromHash = () => slots.findIndex((s) => s.dataset.slug === decodeURIComponent(location.hash.slice(1)));
 
-function show(d) {
-  const by = [d.maker, d.year].filter(Boolean).map(esc).join(", ");
-  const facts = [`${mb(d.bytes)} of menus`, `${d.title_sets} title set${d.title_sets === 1 ? "" : "s"}`];
-  $("details").innerHTML = `
-    <div class="text">
-      <h2>${esc(d.title)}</h2>
-      <p class="byline">${by ? `${by} ` : ""}<span class="tag">${esc(d.system)}</span></p>
-      <p class="blurb">${esc(d.blurb)}</p>
-      <p class="facts">${facts.join(" · ")}</p>
-    </div>
-    <a class="play" href="${href(d)}"><span class="orb">${PLAY}</span>Play</a>`;
-}
-
-if (!discs.length) $("details").textContent = "No discs yet.";
-else go(Math.max(fromHash(), 0), { replace: true });
+if (slots.length) go(Math.max(fromHash(), 0), { replace: true });
 addEventListener("popstate", () => {
   const i = fromHash();
   if (i >= 0 && i !== at) go(i, { replace: true });
@@ -241,5 +216,3 @@ shelf.addEventListener("wheel", (e) => {
   e.preventDefault();
 }, { passive: false });
 </script>
-</body>
-</html>
