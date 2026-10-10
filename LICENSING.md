@@ -41,5 +41,6 @@ would need the same notices shipped beside it.
 The menu bundles keep each disc's Creative Commons licence (see
 [fixtures/README.md](fixtures/README.md)). The site credits each disc as
 `credit` in `web/discs.json`, links its licence, and says the menus are
-adapted from the discs. The `av-calibration-*` discs are NonCommercial, so the
-site must not carry advertising or be run commercially while it serves them.
+adapted from the discs. The `av-calibration-*` and `bloodspell-*` discs are
+NonCommercial, so the site must not carry advertising or be run commercially
+while it serves them.

@@ -57,6 +57,76 @@
       "image": "SITA_PAL_DVD.img",
       "license": "Film CC BY-SA 3.0 (later CC0); upload carries no licence tag",
       "notes": ".img not browsable on archive.org; fetched via HTTP range reads of the ISO 9660 filesystem"
+    },
+    {
+      "slug": "big-buck-bunny-ntsc",
+      "title": "Big Buck Bunny (2008 official DVD, NTSC)",
+      "system": "NTSC",
+      "archive_id": "BigBuckBunny",
+      "image": "big-buck-bunny-NTSC.iso",
+      "license": "Film CC BY 3.0 (Blender Foundation), which covers everything on the DVDs",
+      "license_url": "http://creativecommons.org/licenses/by/3.0/",
+      "notes": "Professionally authored; 14 VTSs; VTS_01_0.VOB is an ~82 MB motion menu"
+    },
+    {
+      "slug": "big-buck-bunny-pal",
+      "title": "Big Buck Bunny (2008 official DVD, PAL)",
+      "system": "PAL",
+      "archive_id": "BigBuckBunny",
+      "image": "big-buck-bunny-PAL.iso",
+      "license": "Film CC BY 3.0 (Blender Foundation), which covers everything on the DVDs",
+      "license_url": "http://creativecommons.org/licenses/by/3.0/",
+      "notes": "11 VTSs; PAL counterpart, ~78 MB motion menu"
+    },
+    {
+      "slug": "sintel-pal",
+      "title": "Sintel (2010 4-DVD box set, PAL disc)",
+      "system": "PAL",
+      "archive_id": "sintel-dvd",
+      "image": "Sintel_PAL.iso",
+      "license": "Film CC BY 3.0 (Blender Foundation); upload tagged CC BY 4.0",
+      "license_url": "http://creativecommons.org/licenses/by/3.0/",
+      "notes": "7 VTSs; ~86 MB motion menu. The box's EXTRAS and DATA discs aren't DVD-Video"
+    },
+    {
+      "slug": "sintel-ntsc",
+      "title": "Sintel (2010 4-DVD box set, NTSC disc)",
+      "system": "NTSC",
+      "archive_id": "sintel-dvd",
+      "image": "Sintel_NTSC.iso",
+      "license": "Film CC BY 3.0 (Blender Foundation); upload tagged CC BY 4.0",
+      "license_url": "http://creativecommons.org/licenses/by/3.0/",
+      "notes": "7 VTSs; NTSC counterpart, ~92 MB motion menu"
+    },
+    {
+      "slug": "valkaama-pal",
+      "title": "Valkaama (DVD, PAL)",
+      "system": "PAL",
+      "archive_id": "valkaama",
+      "image": "Valkaama_DVD_PAL.iso",
+      "license": "Film CC BY-SA 3.0 (Tim Baumann); upload tagged CC BY-SA 4.0",
+      "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "notes": "1 VTS; 28 MB menu VOB"
+    },
+    {
+      "slug": "bloodspell-1",
+      "title": "BloodSpell: Special Edition DVD (NTSC, disc 1)",
+      "system": "NTSC",
+      "archive_id": "BloodSpell_NTSC_DVD",
+      "image": "BloodSpell_Disc_1_NTSC.iso",
+      "license": "CC BY-NC 2.5 Scotland",
+      "license_url": "http://creativecommons.org/licenses/by-nc/2.5/scotland/",
+      "notes": "Uploaded by Strange Company; 3 VTSs, 22 MB menu VOB"
+    },
+    {
+      "slug": "bloodspell-2",
+      "title": "BloodSpell: Special Edition DVD (NTSC, disc 2)",
+      "system": "NTSC",
+      "archive_id": "BloodSpell_NTSC_DVD",
+      "image": "BloodSpell_Disc_2_NTSC.iso",
+      "license": "CC BY-NC 2.5 Scotland",
+      "license_url": "http://creativecommons.org/licenses/by-nc/2.5/scotland/",
+      "notes": "Extras disc; 17 VTSs with small menus, so lots of cross-VTS navigation"
     }
   ]
 }

@@ -42,7 +42,14 @@ Packing is reproducible, so an unchanged bundle repacks to the identical archive
 | `nina-vision` | NTSC | CC BY-SA 3.0 | Nina Paley (animation), Terry Hancock (DVD) | Hand-authored; 125 MB looping VMGM motion menu |
 | `av-calibration-pal` | PAL | CC BY-NC-SA 3.0 | Shaul Livshits | Test-pattern disc; no VMGM menu VOB |
 | `av-calibration-ntsc` | NTSC | CC BY-NC-SA 3.0 | Shaul Livshits | Same disc for NTSC |
+| `big-buck-bunny-ntsc` | NTSC | CC BY 3.0 | Blender Foundation, 2008 | Official Peach DVD; 14 VTSs; ~82 MB motion menu |
+| `big-buck-bunny-pal` | PAL | CC BY 3.0 | as above | Same disc for PAL; 11 VTSs |
+| `sintel-pal` | PAL | film CC BY 3.0 | Blender Foundation, 2010 | Official Durian box set's film disc; 7 VTSs; ~86 MB motion menu |
+| `sintel-ntsc` | NTSC | film CC BY 3.0 | as above | Same disc for NTSC |
+| `valkaama-pal` | PAL | film CC BY-SA 3.0 | Tim Baumann, 2010 | Indie feature; single VTS, 28 MB menu |
+| `bloodspell-1` | NTSC | CC BY-NC 2.5 Scotland | Strange Company, 2007 | Machinima feature; 3 VTSs |
+| `bloodspell-2` | NTSC | CC BY-NC 2.5 Scotland | as above | Extras disc; 17 VTSs with small menus, so lots of navigation between them |
 
-Credits are as given on the archive.org items (`archive_id` in `discs.json`). The Elephants Dream and Sita uploads carry no licence tag of their own. The licences above are those of the films, which their makers released freely.
+Credits are as given on the archive.org items (`archive_id` in `discs.json`). The Elephants Dream and Sita uploads carry no licence tag of their own, and the Sintel and Valkaama uploads are tagged with a 4.0 licence. The licences above are those of the films, which their makers released freely.
 
-The menu bundles in `bundles/` are adapted from these discs (stripped of their titles) and keep each disc's licence. The `av-calibration-*` bundles are NonCommercial and ShareAlike.
+The menu bundles in `bundles/` are adapted from these discs (stripped of their titles) and keep each disc's licence. The `av-calibration-*` bundles are NonCommercial and ShareAlike; the `bloodspell-*` bundles are NonCommercial.
