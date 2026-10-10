@@ -30,10 +30,59 @@ export function createPlayer(els, opts, hooks = {}) {
   let stillTimer = null;
   let lastFrame = null;   // {at, duration}
   let sources = [];       // scheduled audio: {node, epoch}
+  let audioUntil = -Infinity; // timeline ms where the audio received so far ends
   let shown = 0, dropped = 0, stalls = 0, lastPresentedPost = 0;
   let shownPlaceholder = null;
 
-  const now = () => (frozenAt !== null ? frozenAt : (actx.currentTime - base) * 1000);
+  // The video clock. currentTime moves in steps of several ms and is read
+  // at uneven moments, so a frame due near a refresh would land on that
+  // refresh or the next at random: uneven cadence, seen as judder. Instead
+  // map the refresh's own timestamp onto the context's clock through a
+  // smoothed offset, and aim at when the refresh reaches the screen. Video
+  // also lags by the audio output latency, so it shows what is being heard.
+  let offset = null;      // currentTime minus performance.now(), smoothed (ms)
+  let latency = null;     // currentTime minus the time being heard, smoothed (ms)
+  let refresh = 1000 / 60, lastTs = null, grid = null, clock = 0, samples = 0;
+  function tick(ts) {
+    const k = 1 / Math.min(++samples, 100); // a running mean at first, then slow
+    if (lastTs !== null && ts - lastTs < 100) refresh += (ts - lastTs - refresh) * 0.05;
+    lastTs = ts;
+    // rAF timestamps wander a ms or so either side of the refreshes: follow
+    // a smoothed grid of refreshes instead.
+    const due = grid === null ? ts : grid + refresh * Math.max(1, Math.round((ts - grid) / refresh));
+    grid = Math.abs(ts - due) > 4 ? ts : due + (ts - due) * 0.05;
+    const sample = actx.currentTime * 1000 - performance.now();
+    if (offset !== null && Math.abs(sample - offset) > 50) samples = 1; // the context was suspended
+    offset = samples === 1 ? sample : offset + (sample - offset) * k;
+    const o = actx.getOutputTimestamp?.();
+    const l = o?.performanceTime > 0
+      ? actx.currentTime * 1000 - (o.contextTime * 1000 + performance.now() - o.performanceTime)
+      : (actx.outputLatency ?? 0) * 1000;
+    const lc = Math.min(Math.max(l, 0), 500);
+    latency = latency === null ? lc : latency + (lc - latency) * k;
+    clock = grid + refresh + offset - latency;
+  }
+
+  // Phase lock. Where frames last p/q refreshes (25 fps on 60 Hz: 12/5),
+  // the moments they fall due sit on a lattice of spacing refresh/q against
+  // the refreshes, and a frame due right on a refresh boundary lands on one
+  // side or the other at the mercy of the clock's last bit of jitter. So
+  // nudge the video clock to keep the lattice midway between refreshes.
+  // Moving the nudge by a whole spacing moves one frame to the next refresh,
+  // so it only does that past a spacing either way: frames drifting against
+  // the display (29.97 fps on 60 Hz) then slip by one refresh once, cleanly.
+  let nudge = 0;
+  function lock(late, duration) {
+    const r = duration / refresh;
+    let q = 1;
+    while (q <= 12 && Math.abs(q * r - Math.round(q * r)) > 0.03) q++;
+    if (q > 12) return;
+    const s = refresh / q;
+    nudge += (s / 2 - (((late % s) + s) % s)) * 0.1;
+    if (nudge > s) nudge -= s;
+    else if (nudge < -s) nudge += s;
+  }
+  const now = () => (frozenAt !== null ? frozenAt : clock - base * 1000 + nudge);
   function freeze(at, why) {
     if (frozenAt === null) [frozenAt, holding] = [at, why];
   }
@@ -64,6 +113,7 @@ export function createPlayer(els, opts, hooks = {}) {
         break;
       case "audio":
         insertSorted(audio, m);
+        audioUntil = Math.max(audioUntil, m.at + (m.frames / m.rate) * 1000);
         break;
       case "subpicture":
         insertSorted(spus, m);
@@ -82,6 +132,7 @@ export function createPlayer(els, opts, hooks = {}) {
         epoch = m.epoch;
         frames = frames.filter((f) => f.epoch >= epoch);
         audio = audio.filter((a) => a.epoch >= epoch);
+        audioUntil = Math.max(-Infinity, ...audio.map((a) => a.at + (a.frames / a.rate) * 1000));
         spus = spus.filter((s) => s.epoch >= epoch);
         buttonSets = buttonSets.filter((b) => b.epoch >= epoch);
         stills = [];
@@ -160,12 +211,17 @@ export function createPlayer(els, opts, hooks = {}) {
 
   // ---- main loop ----
 
-  function frame() {
+  function frame(ts) {
     requestAnimationFrame(frame);
+    tick(ts);
     if (base === null) {
-      // Prebuffer before starting the clock.
+      // Prebuffer before starting the clock: 8 frames, or half a second of
+      // anything. The worker decodes only so far ahead of what has been
+      // shown, so a menu of a few frames over a long stretch of audio would
+      // never reach 8.
       const first = frames[0] ?? placeholders[0] ?? stills[0];
-      if (!first || (frames.length < 8 && !placeholders.length && !stills.length && !stopped)) return;
+      const ahead = Math.max(frames.at(-1)?.at ?? -Infinity, audio.at(-1)?.at ?? -Infinity) - (first?.at ?? 0);
+      if (!first || (frames.length < 8 && ahead < 500 && !placeholders.length && !stills.length && !stopped)) return;
       base = actx.currentTime - first.at / 1000 + 0.05;
     }
     const t = now();
@@ -195,6 +251,7 @@ export function createPlayer(els, opts, hooks = {}) {
       img = frames.shift();
     }
     if (img) {
+      if (frozenAt === null) lock(t - img.at, img.duration);
       const { width, height } = img;
       if (video.width !== width || video.height !== height) [video.width, video.height] = [width, height];
       if (img.format === "yuv") yuv.draw(img);
@@ -211,12 +268,13 @@ export function createPlayer(els, opts, hooks = {}) {
     }
     placeholders = placeholders.filter((p) => t < p.at + p.duration);
 
-    // Stall: out of frames mid-playback (not in a still or placeholder) — hold
-    // the clock until more arrive.
-    if (frozenAt === null && !frames.length && !ph && !stopped && lastFrame && t > lastFrame.at + lastFrame.duration + 100) {
+    // Stall: out of frames and audio mid-playback (not in a still or
+    // placeholder) — hold the clock until more arrive. A menu can be a
+    // single picture over a long stretch of audio, which isn't a stall.
+    if (frozenAt === null && !frames.length && !ph && !stopped && lastFrame && t > Math.max(lastFrame.at + lastFrame.duration, audioUntil) + 100) {
       freeze(t, "stall");
       stalls++;
-    } else if (holding === "stall" && frames.length) {
+    } else if (holding === "stall" && (frames.length || audioUntil > t)) {
       unfreeze();
     }
 
