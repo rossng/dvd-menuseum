@@ -105,6 +105,7 @@ use crate::picture_reconstruction::{
 use crate::quant_matrix_extension::{QuantMatrixExtension, QuantiserMatrixState};
 use crate::sequence_extension::Mpeg2Sequence;
 use crate::sequence_header::SEQUENCE_HEADER_CODE;
+use crate::stream_writer::SEQUENCE_END_CODE;
 use crate::{Error, Result};
 
 /// A reconstructed frame paired with its §6.3.10 `temporal_reference` —
@@ -1736,6 +1737,21 @@ mod tests {
             Err(Error::InvalidBitstream(_))
         ));
     }
+
+    #[test]
+    fn stream_decoder_displays_the_held_anchor_at_sequence_end() {
+        // One I-picture, then sequence_end_code: a still menu's video. The
+        // picture must come out without a flush.
+        let mut es = include_bytes!("../tests/fixtures/ffmpeg-352x240-25fps.m2v").to_vec();
+        es.extend_from_slice(&SEQUENCE_END_CODE.to_be_bytes());
+        let mut dec = StreamDecoder::new();
+        let mut out = vec![];
+        dec.push(&es, 7, &mut out);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].1, 7);
+        dec.flush(&mut out);
+        assert_eq!(out.len(), 1);
+    }
 }
 
 /// Incremental counterpart of [`decode_video_sequence`] (added for DVD
@@ -1820,6 +1836,12 @@ impl StreamDecoder {
             let unit = self.buf[code_start..unit_end].to_vec();
             let unit_tag = self.tag_at(code_start);
             self.decode_unit(&unit, unit_tag, out);
+            // A sequence_end_code ends the sequence: the held anchor displays
+            // now, not when a later picture arrives (a still menu may hold
+            // one picture under minutes of audio, with no picture after it).
+            if is_start_code(&self.buf[next_offset..], SEQUENCE_END_CODE) {
+                out.extend(self.held.take());
+            }
             offset = next_offset;
         }
         self.consume(offset);
