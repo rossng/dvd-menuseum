@@ -25,6 +25,8 @@ const log = (msg) => {
 
 let player = null;
 let ready = false;
+let started = false;
+let aspect = null; // widescreen, as the player last said
 const load = (source) => (player = createPlayer(
   { video: $("video"), overlay: $("overlay") },
   source,
@@ -44,7 +46,13 @@ const load = (source) => (player = createPlayer(
       } else if (/HTTP|fetch/i.test(message)) $("where").textContent = "Couldn't read the disc";
     },
     stats: (text) => ($("stats").textContent = text),
-    widescreen: (wide) => $("screen").classList.toggle("wide", wide),
+    // Until playback starts the screen keeps the shape the page was built
+    // with (the first picture's), rather than following the player as it
+    // reads ahead.
+    widescreen: (wide) => {
+      aspect = wide;
+      if (started) $("screen").classList.toggle("wide", wide);
+    },
     placeholder: (text) => {
       $("notice").style.display = text ? "grid" : "none";
       if (text) $("notice").textContent = text;
@@ -125,7 +133,6 @@ if (local) {
   });
 }
 
-let started = false;
 $("insert").addEventListener("click", () => {
   if (local && !player) return picker.click();
   if ($("insert").classList.contains("loading") || started) return;
@@ -134,6 +141,7 @@ $("insert").addEventListener("click", () => {
   stopLight();
   document.querySelector(".aurora").classList.add("still");
   player.start();
+  if (aspect !== null) $("screen").classList.toggle("wide", aspect);
   $("insert").classList.add("going");
   setTimeout(() => $("insert").remove(), 600);
 });

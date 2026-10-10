@@ -15,7 +15,7 @@ usage: scripts/site.py [--out DIR] [--copy] [--menuseum PATH] [--catalog-only]
 
 Expects the bundles extracted (scripts/bundles.py), web/pkg/ built
 (scripts/dev.sh --build-only) and web/node_modules installed (npm ci).
-Palettes are cached in target/palettes/, keyed on the bundle and render
+Palettes (and first aspects) are cached in target/palettes/, keyed on the bundle and render
 options, so only changed discs are re-rendered. The base path the site is
 served under comes from $BASE_PATH (default /).
 
@@ -107,29 +107,42 @@ def palette(png):
     ]
 
 
-def menu_palette(menuseum, slug, bundle, opts):
-    """The palette of the menu a viewer first lands on: the last picture of a
-    `menuseum render` run with the disc's scripted inputs."""
+def first_aspect(menuseum, bundle):
+    """Whether the disc's first picture is 16:9, so its page can draw the
+    screen that shape before the player says so: the domain of the first
+    event of a `menuseum trace`, and that domain's video attributes."""
+    out = subprocess.run([str(menuseum), "trace", str(bundle / "VIDEO_TS"), "--max-events", "1"], check=True, capture_output=True, text=True).stdout
+    fields = dict(f.split("=", 1) for f in out.split() if "=" in f)
+    domain, vts = int(fields["d"]), int(fields["vts"])
+    ifo = (bundle / "VIDEO_TS" / ("VIDEO_TS.IFO" if domain in (1, 4) else f"VTS_{vts:02}_0.IFO")).read_bytes()
+    attr = ifo[0x200 if domain == 2 else 0x100]  # title, else menu, video attributes
+    return (attr >> 2) & 3 == 3
+
+
+def menu_look(menuseum, slug, bundle, opts):
+    """The palette of the menu a viewer first lands on (the last picture of a
+    `menuseum render` run with the disc's scripted inputs), and whether the
+    first picture is widescreen."""
     settle = str(opts.get("settle", 12))
     inputs = opts.get("inputs", "")
     stamp = bundle / ".archive"
     key = hashlib.sha256(json.dumps([(bundle / "bundle.json").read_text(), stamp.read_text() if stamp.exists() else "", settle, inputs]).encode()).hexdigest()[:16]
     cached = PALETTE_CACHE / f"{slug}-{key}.json"
-    if cached.exists():
-        return json.loads(cached.read_text())
+    if cached.exists() and isinstance(look := json.loads(cached.read_text()), dict):
+        return look
     with tempfile.TemporaryDirectory() as tmp:
         cmd = [str(menuseum), "render", str(bundle / "VIDEO_TS"), "--out", tmp, "-i", inputs, "--settle", settle]
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
         pngs = sorted(Path(tmp).glob("*.png"))
         if not pngs:
             raise SystemExit(f"{slug}: render produced no picture")
-        colours = palette(pngs[-1])
+        look = {"palette": palette(pngs[-1]), "widescreen": first_aspect(menuseum, bundle)}
     PALETTE_CACHE.mkdir(parents=True, exist_ok=True)
     for old in PALETTE_CACHE.glob(f"{slug}-*.json"):
         old.unlink()
-    cached.write_text(json.dumps(colours))
-    print(f"{slug}: sampled palette {' '.join(colours)}", file=sys.stderr)
-    return colours
+    cached.write_text(json.dumps(look))
+    print(f"{slug}: sampled palette {' '.join(look['palette'])}", file=sys.stderr)
+    return look
 
 
 def source():
@@ -174,7 +187,7 @@ def main():
         if not (bundle / "bundle.json").exists():
             raise SystemExit(f"{slug}: no bundle at {bundle}: run scripts/bundles.py")
         entry = {k: v for k, v in disc.items() if k != "menu"}
-        entry.update(facts(bundle), bundle=f"bundles/{slug}/", palette=menu_palette(args.menuseum, slug, bundle, disc.get("menu", {})))
+        entry.update(facts(bundle), bundle=f"bundles/{slug}/", **menu_look(args.menuseum, slug, bundle, disc.get("menu", {})))
         catalog.append(entry)
     text = json.dumps({"source": source(), "discs": catalog}, indent=2) + "\n"
     if not CATALOG.exists() or CATALOG.read_text() != text:  # unchanged, a dev server needn't reload

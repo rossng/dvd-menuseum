@@ -112,7 +112,7 @@ const deed = licenceDeed(disc.license);
 
 <main id="player" data-local={local ? "" : undefined} data-bundle={local ? undefined : url(disc.bundle)} data-title={disc.title}>
   <section class="deck" aria-label="Player">
-    <div class="screen" id="screen">
+    <div class:list={["screen", { wide: disc.widescreen }]} id="screen">
       <canvas id="video"></canvas>
       <canvas id="overlay"></canvas>
       <div class="notice" id="notice"></div>
