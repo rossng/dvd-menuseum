@@ -41,25 +41,34 @@ impl Picture {
         let (w, h) = (self.width, self.height);
         let cw = w.div_ceil(2);
         let mut px = vec![255u8; w * h * 4];
-        let luma = |row: usize, col: usize| -> i32 {
-            if !self.interlaced || row == 0 || row + 1 >= h {
-                self.y[row * w + col] as i32
+        if w == 0 {
+            return px;
+        }
+        let mut luma = vec![0u8; w];
+        let clamp = |x: i32| x.clamp(0, 255) as u8;
+        for (row, out) in px.chunks_exact_mut(w * 4).enumerate() {
+            let this = &self.y[row * w..][..w];
+            let luma = if !self.interlaced || row == 0 || row + 1 >= h {
+                this
             } else {
                 // (above + 2 * this + below) / 4
-                let (a, b, c) = (self.y[(row - 1) * w + col], self.y[row * w + col], self.y[(row + 1) * w + col]);
-                (a as i32 + 2 * b as i32 + c as i32 + 2) / 4
-            }
-        };
-        let clamp = |x: i32| x.clamp(0, 255) as u8;
-        for row in 0..h {
-            for col in 0..w {
-                let y = (luma(row, col) - 16) * 298;
-                let c = (row / 2) * cw + col / 2;
-                let (u, v) = (self.cb[c] as i32 - 128, self.cr[c] as i32 - 128);
-                let o = (row * w + col) * 4;
-                px[o] = clamp((y + 409 * v + 128) >> 8);
-                px[o + 1] = clamp((y - 100 * u - 208 * v + 128) >> 8);
-                px[o + 2] = clamp((y + 516 * u + 128) >> 8);
+                let (above, below) = (&self.y[(row - 1) * w..][..w], &self.y[(row + 1) * w..][..w]);
+                for (((l, &a), &b), &c) in luma.iter_mut().zip(above).zip(this).zip(below) {
+                    *l = ((a as u32 + 2 * b as u32 + c as u32 + 2) / 4) as u8;
+                }
+                &luma
+            };
+            let (cb, cr) = (&self.cb[(row / 2) * cw..][..cw], &self.cr[(row / 2) * cw..][..cw]);
+            // Two pixels share each chroma sample.
+            for (((o, l), &u), &v) in out.chunks_mut(8).zip(luma.chunks(2)).zip(cb).zip(cr) {
+                let (u, v) = (u as i32 - 128, v as i32 - 128);
+                let (r, g, b) = (409 * v + 128, -100 * u - 208 * v + 128, 516 * u + 128);
+                for (o, &l) in o.chunks_exact_mut(4).zip(l) {
+                    let y = (l as i32 - 16) * 298;
+                    o[0] = clamp((y + r) >> 8);
+                    o[1] = clamp((y + g) >> 8);
+                    o[2] = clamp((y + b) >> 8);
+                }
             }
         }
         px
