@@ -156,7 +156,7 @@ const deed = licenceDeed(disc.license);
 
   <section class="info glass" id="info">
     <h2>{disc.title}</h2>
-    {(by || disc.system) && <p class="byline">{by && `${by} `}{disc.system && <span class="tag">{disc.system}</span>}</p>}
+    {(by || disc.system) && <p class="byline">{by && `${by} `}{disc.part && <span class="tag">{disc.part}</span>} {disc.system && <span class="tag">{disc.system}</span>}</p>}
     <p>{disc.blurb}</p>
     <p class="small">Arrow keys and <kbd>Enter</kbd>, or click the menu. <kbd>T</kbd> title menu, <kbd>R</kbd> menu, <kbd>C</kbd> chapters, <kbd>Esc</kbd> return.</p>
     {!local && (

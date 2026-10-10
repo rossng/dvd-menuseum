@@ -38,7 +38,7 @@ const crateGroups = Object.entries(Object.groupBy(crates, (c) => c.licence));
     <table>
       {discs.map((d) => (
         <tr>
-          <td><a href={d.source} rel="noopener">{d.title}</a> <span class="faint">{d.system}</span><br><span class="faint">{d.credit}</span></td>
+          <td><a href={d.source} rel="noopener">{d.title}</a> <span class="faint">{[d.part, d.system].filter(Boolean).join(" · ")}</span><br><span class="faint">{d.credit}</span></td>
           <td>{licenceDeed(d.license) ? <a href={licenceDeed(d.license)} rel="noopener">{d.license}</a> : d.license}</td>
         </tr>
       ))}

@@ -1,10 +1,15 @@
 ---
 import Base from "../layouts/Base.astro";
 import { discMarkup } from "../lib/disc.js";
-import { discs, url, playUrl } from "../lib/site.js";
+import { discs, stacks, variant, url, playUrl } from "../lib/site.js";
 
 const mb = (bytes) => (bytes >= 1e6 ? `${Math.round(bytes / 1e6)} MB` : `${Math.round(bytes / 1e3)} KB`);
 const by = (d) => [d.maker, d.year].filter(Boolean).join(", ");
+// A disc's name in the shelf's labels: its title, and its variant if it has one.
+const named = (stack, d) => `${d.title} (${variant(stack, d) || d.system})`;
+// What's the same for every disc in a stack, for its byline: the system
+// unless that's what tells them apart.
+const shared = (stack) => (variant(stack, stack[0]).includes(stack[0].system) ? "" : stack[0].system);
 const facts = (d) => [`${mb(d.bytes)} of menus`, `${d.title_sets} title set${d.title_sets === 1 ? "" : "s"}`].join(" · ");
 ---
 <Base>
@@ -30,11 +35,17 @@ const facts = (d) => [`${mb(d.bytes)} of menus`, `${d.title_sets} title set${d.t
     transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .slot {
-    position: absolute; left: calc(var(--size) / -2); top: calc(var(--size) / -2); transform-style: preserve-3d;
+    position: absolute; left: calc(var(--size) / -2); top: calc(var(--size) / -2); width: var(--size); height: var(--size); transform-style: preserve-3d;
     transform: rotateY(calc(var(--i) * var(--step))) translateZ(var(--radius));
   }
   .slot .disc { cursor: pointer; transition: transform 0.5s; }
   .slot.front .disc { transform: translateZ(30px); }
+  /* A stack: the discs under the top one (--k is a disc's depth) rise
+     behind it, so their top edges show. */
+  .copy {
+    position: absolute; left: 0; top: 0; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translate3d(0, calc(var(--k) * var(--size) * -0.08), calc(var(--k) * -18px)) scale(calc(1 - var(--k) * 0.04));
+  }
   .floor { /* the reflection, fading away below the floor line */
     position: absolute; inset: 0; pointer-events: none;
     -webkit-mask: linear-gradient(180deg, transparent var(--floor), rgb(0 0 0 / 0.32) var(--floor), transparent calc(var(--floor) + var(--size) * 0.3));
@@ -60,6 +71,10 @@ const facts = (d) => [`${mb(d.bytes)} of menus`, `${d.title_sets} title set${d.t
   .details h2 { font-size: clamp(1.6rem, 5vw, 2.1rem); line-height: 1.15; text-shadow: 0 0 16px rgb(110 200 255 / 0.35); }
   .details .byline { margin: 4px 0 0; color: var(--text-dim); }
   .details .blurb { margin: 10px 0 6px; }
+  .details .variants { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+  .details .variants .btn { height: 26px; padding: 0 12px; font-size: 0.8rem; }
+  .details .variants .btn[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.55), 0 0 10px var(--glow); }
+  .details .note { margin: 0 0 6px; color: var(--text-dim); }
   .details .facts { margin: 0; font-size: 0.85rem; color: var(--text-faint); }
   .details .play { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-dim); font-size: 0.85rem; text-decoration: none; }
   .details .play .orb { width: 68px; height: 68px; }
@@ -81,32 +96,46 @@ const facts = (d) => [`${mb(d.bytes)} of menus`, `${d.title_sets} title set${d.t
 <main>
   <section class="shelf" id="shelf" aria-roledescription="carousel" aria-label="Discs">
     <div class="floor" aria-hidden="true"><div class="stage"><div class="ring" id="mirror">
-      {discs.map((d, i) => <div class="slot" style={`--i: ${i}`} set:html={discMarkup(d)} />)}
+      {stacks.map((stack, i) => (
+        <div class="slot" style={`--i: ${i}`}>{stack.map((d, k) => <div class="copy" style={`--k: ${k}`} set:html={discMarkup(d)} />)}</div>
+      ))}
     </div></div></div>
     <div class="horizon"></div>
     <div class="stage"><div class="ring" id="ring">
-      {discs.map((d, i) => (
-        <div class="slot" style={`--i: ${i}`} data-slug={d.slug} data-href={playUrl(d)} data-label={`${d.title} (${d.system})`} set:html={discMarkup(d)} />
+      {stacks.map((stack, i) => (
+        <div class="slot" style={`--i: ${i}`}>
+          {stack.map((d, k) => <div class="copy" style={`--k: ${k}`} data-slug={d.slug} data-href={playUrl(d)} data-label={named(stack, d)} set:html={discMarkup(d)} />)}
+        </div>
       ))}
     </div></div>
     <button class="btn turn prev" aria-label="Previous disc"><svg viewBox="0 0 10 10"><path d="M7 1 2.5 5 7 9z"/></svg></button>
     <button class="btn turn next" aria-label="Next disc"><svg viewBox="0 0 10 10"><path d="M3 1 7.5 5 3 9z"/></svg></button>
   </section>
   <nav class="dots" id="dots" aria-label="Choose a disc">
-    {discs.map((d) => <button aria-label={`${d.title} (${d.system})`} />)}
+    {stacks.map((stack) => <button aria-label={stack.length > 1 ? stack[0].title : named(stack, stack[0])} />)}
   </nav>
 
   <div id="details" aria-live="polite">
     {discs.length === 0 && <section class="details glass">No discs yet.</section>}
-    {discs.map((d, i) => (
+    {stacks.map((stack, i) => (
       <section class="details glass" hidden={i !== 0}>
         <div class="text">
-          <h2>{d.title}</h2>
-          <p class="byline">{by(d) && `${by(d)} `}<span class="tag">{d.system}</span></p>
-          <p class="blurb">{d.blurb}</p>
-          <p class="facts">{facts(d)}</p>
+          <h2>{stack[0].title}</h2>
+          <p class="byline">{by(stack[0]) && `${by(stack[0])} `}{shared(stack) && <span class="tag">{shared(stack)}</span>}</p>
+          <p class="blurb">{stack[0].blurb}</p>
+          {stack.length > 1 && (
+            <div class="variants" role="group" aria-label="Discs">
+              {stack.map((d, k) => <button class="btn" data-slug={d.slug} aria-pressed={k === 0 ? "true" : "false"}>{variant(stack, d)}</button>)}
+            </div>
+          )}
+          {stack.map((d, k) => (
+            <div class="variant" hidden={k !== 0}>
+              {k > 0 && d.part && <p class="note">{d.blurb}</p>}
+              <p class="facts">{facts(d)}</p>
+            </div>
+          ))}
         </div>
-        <a class="play" href={playUrl(d)}><span class="orb"><svg viewBox="0 0 10 10"><path d="M2.5 1.2 9 5 2.5 8.8z"/></svg></span>Play</a>
+        <a class="play" href={playUrl(stack[0])}><span class="orb"><svg viewBox="0 0 10 10"><path d="M2.5 1.2 9 5 2.5 8.8z"/></svg></span>Play</a>
       </section>
     ))}
   </div>
@@ -130,6 +159,9 @@ const $ = (id) => document.getElementById(id);
 const shelf = $("shelf");
 const slots = [...$("ring").children], mirrors = [...$("mirror").children];
 const dots = [...$("dots").children], details = [...$("details").children];
+// Each slot holds a stack of discs (.copy); top[i] is the one on top of stack i.
+const copies = slots.map((s) => [...s.children]), mirrored = mirrors.map((s) => [...s.children]);
+const top = slots.map(() => 0);
 light(shelf);
 
 // Ring geometry: discs sit edge to edge, plus a gap, around a circle.
@@ -141,18 +173,47 @@ function layout() {
 }
 
 let at = 0, turn = 0, swipedAt = 0;
-slots.forEach((slot, i) => {
-  const disc = slot.querySelector(".disc");
+copies.forEach((stack, i) => stack.forEach((copy, k) => {
+  const disc = copy.querySelector(".disc");
   disc.setAttribute("role", "button");
-  disc.setAttribute("aria-label", slot.dataset.label);
+  disc.setAttribute("aria-label", copy.dataset.label);
   disc.addEventListener("click", () => {
     if (performance.now() - swipedAt < 300) return; // the end of a swipe, not a click
-    i === at ? play() : go(i);
+    if (i !== at) go(i);
+    else if (k !== top[i]) pick(i, k);
+    else play();
   });
-  dots[i].addEventListener("click", () => go(i));
-});
+}));
+details.forEach((d, i) => d.querySelectorAll(".variants button").forEach((b, k) => b.addEventListener("click", () => pick(i, k))));
+dots.forEach((b, i) => b.addEventListener("click", () => go(i)));
 layout();
 addEventListener("resize", layout);
+
+// Bring stack i's disc k to the top; the rest keep their order beneath it.
+function restack(i) {
+  const k = top[i];
+  for (const list of [copies[i], mirrored[i]]) list.forEach((c, j) => c.style.setProperty("--k", j === k ? 0 : j < k ? j + 1 : j));
+  const panel = details[i];
+  panel.querySelectorAll(".variants button").forEach((b, j) => b.setAttribute("aria-pressed", j === k));
+  panel.querySelectorAll(".variant").forEach((v, j) => (v.hidden = j !== k));
+  panel.querySelector(".play").href = copies[i][k].dataset.href;
+}
+
+// Which discs spin and take focus: the top one of the stack in front.
+function mark(replace) {
+  for (const [list, stacks] of [[slots, copies], [mirrors, mirrored]]) {
+    list.forEach((s, i) => s.classList.toggle("front", i === at));
+    stacks.forEach((stack, i) => stack.forEach((c, k) => c.querySelector(".disc").classList.toggle("spinning", i === at && k === top[i])));
+  }
+  copies.forEach((stack, i) => stack.forEach((c, k) => (c.querySelector(".disc").tabIndex = i === at && k === top[i] ? 0 : -1)));
+  history[replace ? "replaceState" : "pushState"](null, "", `#${encodeURIComponent(copies[at][top[at]].dataset.slug)}`);
+}
+
+function pick(i, k, { replace = false } = {}) {
+  top[i] = k;
+  restack(i);
+  mark(replace);
+}
 
 // `turn` counts whole revolutions too, so the ring always takes the short way round.
 function go(i, { replace = false } = {}) {
@@ -165,24 +226,35 @@ function go(i, { replace = false } = {}) {
   turn += delta;
   at = i;
   shelf.style.setProperty("--at", turn);
-  for (const list of [slots, mirrors]) {
-    list.forEach((s, j) => {
-      s.classList.toggle("front", j === i);
-      s.querySelector(".disc").classList.toggle("spinning", j === i);
-    });
-  }
-  slots.forEach((s, j) => (s.querySelector(".disc").tabIndex = j === i ? 0 : -1));
   dots.forEach((b, j) => b.setAttribute("aria-current", j === i));
   details.forEach((d, j) => (d.hidden = j !== i));
-  history[replace ? "replaceState" : "pushState"](null, "", `#${encodeURIComponent(slots[i].dataset.slug)}`);
+  mark(replace);
 }
-const play = () => slots.length && (location.href = slots[at].dataset.href);
-const fromHash = () => slots.findIndex((s) => s.dataset.slug === decodeURIComponent(location.hash.slice(1)));
+const play = () => slots.length && (location.href = copies[at][top[at]].dataset.href);
+// The stack and disc the hash names, if it names one.
+function fromHash() {
+  const slug = decodeURIComponent(location.hash.slice(1));
+  for (const [i, stack] of copies.entries()) {
+    const k = stack.findIndex((c) => c.dataset.slug === slug);
+    if (k >= 0) return [i, k];
+  }
+  return null;
+}
+function follow(hash, replace) {
+  if (!hash) return go(at, { replace });
+  const [i, k] = hash;
+  top[i] = k;
+  restack(i);
+  go(i, { replace });
+}
 
-if (slots.length) go(Math.max(fromHash(), 0), { replace: true });
+if (slots.length) {
+  copies.forEach((_, i) => restack(i));
+  follow(fromHash(), true);
+}
 addEventListener("popstate", () => {
-  const i = fromHash();
-  if (i >= 0 && i !== at) go(i, { replace: true });
+  const hash = fromHash();
+  if (hash && (hash[0] !== at || hash[1] !== top[at])) follow(hash, true);
 });
 
 document.querySelector(".turn.prev").addEventListener("click", () => go(at - 1));

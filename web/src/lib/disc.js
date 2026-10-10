@@ -52,7 +52,7 @@ export function discMarkup(d) {
   const size = Math.min(title.length === 1 ? 11 : 8.5, ...title.map((l) => 84 / Math.max(l.length * 0.53, 1)));
   const top = title.length === 1 ? 34 : 26.5;
   const byline = [d.maker, d.year].filter(Boolean).join(" · ");
-  const rim = [d.system, d.license].filter(Boolean).join("  ·  ");
+  const rim = [d.part, d.system, d.license].filter(Boolean).join("  ·  ");
   const codes = `${(d.provider || d.slug).toUpperCase()}  ${d.system ?? ""}  MENUSEUM  01`;
   const defs = `
     <linearGradient id="${id}-mirror" x1="0" y1="0" x2="1" y2="1">
