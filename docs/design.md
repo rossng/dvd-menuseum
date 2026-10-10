@@ -23,7 +23,7 @@ The DVD Menuseum is an archive of DVD menus that plays them in the browser as a 
 
 | Format | Decoder | Notes |
 |---|---|---|
-| MPEG-2 video | oxideav-mpeg12video, vendored in `vendor/` | Upstream decodes only a whole buffered stream and aborts on the first bad picture. Our vendored copy adds `StreamDecoder`, which decodes picture by picture and skips damaged pictures. About 45 fps for PAL interlaced in single-threaded wasm: real time, with modest headroom. |
+| MPEG-2 video | oxideav-mpeg12video, vendored in `vendor/` | Upstream decodes only a whole buffered stream and aborts on the first bad picture. Our vendored copy adds `StreamDecoder`, which decodes picture by picture and skips damaged pictures, and replaces its hottest table walks and per-sample loops with exact equivalents. About 300 fps for PAL interlaced in single-threaded wasm on an M-series Mac, against about 50 before those changes. |
 | AC-3 | oxideav-ac3 | 35–53 dB against ffmpeg on real discs. One authoring tool's stream decodes noticeably differently; under investigation. |
 | MPEG-1 Layer II | oxideav-mp2 | 60–80 dB against ffmpeg. |
 | DTS | oxideav-dts | Correct on 16-bit-source DTS. Real 24-bit-source DTS-ES comes out about 256× too loud and clipped; under investigation. DVDs with DTS nearly always carry AC-3 too. |
@@ -47,7 +47,8 @@ vendor/    oxideav-mpeg12video with StreamDecoder.
 oracle/    libdvdnav built from source, with the same trace format.
 web/       The website (scripts/site.py assembles it with the bundles): the disc
            shelf, the player page and the test harness, sharing player.js
-           (canvas video + overlay, Web Audio, input).
+           (video converted from YCbCr in a WebGL 2 shader, or RGBA
+           from the decoder without it; overlay, Web Audio, input).
 ```
 
 The engine is a VOBU-granular port of libdvdnav's VM and block loop, kept in its own crate behind the `Navigator` trait so that only it and the programs that link it are GPL. It asks a `NavSource` for NAV packs. A sector that hasn't arrived yet is *pending*, so the browser can stream a bundle with HTTP range requests. A missing title VOB set is *stripped*, and the engine skips its cells.
