@@ -68,7 +68,7 @@
   .about { max-width: 640px; margin: 20px auto 0; padding: 14px 22px; }
   .about h3 { font-size: 1.05rem; font-weight: 400; }
   .about p { margin: 4px 0 0; color: var(--text-dim); }
-  footer { text-align: center; padding: 20px 16px 40px; font-size: 0.85rem; }
+  footer { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 20px 16px 40px; font-size: 0.85rem; }
   footer a { color: var(--text-faint); }
   @media (max-width: 520px) {
     .details { flex-direction: column; align-items: stretch; text-align: left; }
@@ -100,8 +100,16 @@
   </section>
 </main>
 
-<footer><a href="#" id="licences">Licences</a></footer>
+<footer>
+  <a href="#" id="licences">Licences</a>
+  <seal-of-slop size="40" text="This project is 100% vibe coded and I have not reviewed the code.
 
+After seeing https://dvdmoviemenus.com/ I wished that there was an interactive archive available and thought it would be cool if we could do the entire thing client-side from the original DVD data.
+
+No guarantees or support are offered."></seal-of-slop>
+</footer>
+
+<script type="module" src="https://cdn.jsdelivr.net/npm/seal-of-slop@0.1.1/dist/index.js"></script>
 <script type="module">
 import { discMarkup } from "./disc.js";
 import { aurora, light, licences } from "./chrome.js";

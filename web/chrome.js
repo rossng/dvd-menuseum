@@ -90,6 +90,7 @@ export function licences(link, discs) {
         ${row("&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham", "GPL-2.0-or-later")}
         ${row("&nbsp;&nbsp;oxideav decoders, © Karpelès Lab Inc.", "MIT")}
         ${row("&nbsp;&nbsp;bytemuck, memchr, itoa, thiserror, zmij, serde_core, serde_json", "MIT")}
+        ${row(`<a href="https://www.rossng.eu/seal-of-slop/" rel="noopener">Seal of Slop</a>`, `<a href="https://blueoakcouncil.org/license/1.0.0" rel="noopener">Blue Oak Model License 1.0.0</a>`)}
         ${row("Open Sans typeface", `<a href="https://openfontlicense.org" rel="noopener">SIL Open Font License 1.1</a>`)}
       </table>
       <p><a href="NOTICE.md">Full notices</a></p>
