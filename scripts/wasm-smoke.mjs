@@ -2,6 +2,7 @@
 // uses, with chunks read from the bundle on disk and a simulated clock.
 //
 // usage: node scripts/wasm-smoke.mjs <bundle dir> [seconds] ['<time>:<input> ...']
+// (WASM=<path> runs another build of the module.)
 import { readFile, open } from "node:fs/promises";
 import path from "node:path";
 
@@ -14,7 +15,7 @@ const script = scriptArg.split(/\s+/).filter(Boolean).map((s) => {
 const INPUTS = { up: 0, down: 1, left: 2, right: 3, activate: 4, menu: 6 };
 const KINDS = [null, "frame", "audio", "subpicture", "buttons", "still", "placeholder", "flush", "state", "stopped", "error"];
 
-const { instance } = await WebAssembly.instantiate(await readFile(path.join(root, "target/wasm32-unknown-unknown/release/menuseum_wasm.wasm")), {});
+const { instance } = await WebAssembly.instantiate(await readFile(process.env.WASM ?? path.join(root, "target/wasm32-unknown-unknown/release/menuseum_wasm.wasm")), {});
 const x = instance.exports;
 const copyIn = (bytes) => {
   const p = x.mm_alloc(bytes.length);
@@ -38,6 +39,13 @@ if (!x.mm_start(0, 0, 800, 96)) throw new Error(text());
 const counts = {};
 let still = null, now = 0, decodeMs = 0;
 const end = Number(secondsArg) * 1000;
+// Outputs are converted (to RGBA, f32 samples) as they are popped, so time that too.
+const nextOutput = () => {
+  const t0 = performance.now();
+  const kind = x.mm_next_output();
+  decodeMs += performance.now() - t0;
+  return kind;
+};
 while (now < end) {
   while (script.length && script[0].t <= now) {
     const s = script.shift();
@@ -61,7 +69,7 @@ while (now < end) {
   }
   decodeMs += performance.now() - t0;
   let kind;
-  while ((kind = x.mm_next_output())) {
+  while ((kind = nextOutput())) {
     const name = KINDS[kind], meta = JSON.parse(text());
     counts[name] = (counts[name] ?? 0) + 1;
     if (name === "still") {
