@@ -1,0 +1,4 @@
+# Clones skip the menu bundles, ~670 MB of LFS charged to the owner's quota:
+# fetch them with `git lfs pull --exclude=""` (see fixtures/README.md).
+[lfs]
+	fetchexclude = *

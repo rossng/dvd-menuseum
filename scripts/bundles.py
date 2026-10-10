@@ -57,7 +57,7 @@ def unpack(slug):
     archive, out = ROOT / f"{slug}.tar.zst", ROOT / slug
     with open(archive, "rb") as f:
         if f.read(len(LFS_POINTER)) == LFS_POINTER:
-            print(f"{slug}: archive is an LFS pointer; run `git lfs pull`", file=sys.stderr)
+            print(f"{slug}: archive is an LFS pointer; run `git lfs pull --exclude=\"\"`", file=sys.stderr)
             return False
     current, stamp = up_to_date(archive, out)
     st = archive.stat()

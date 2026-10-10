@@ -18,10 +18,11 @@ jobs:
           lfs: false
 
       # Only the smallest bundle, for the wasm smoke test: the LFS bandwidth
-      # quota is precious (see pages.yml).
+      # quota is precious (see pages.yml). The empty --exclude overrides
+      # .lfsconfig's, which would otherwise exclude it.
       - name: Fetch the smoke-test bundle
         run: |
-          git lfs pull --include fixtures/bundles/av-calibration-ntsc.tar.zst
+          git lfs pull --include fixtures/bundles/av-calibration-ntsc.tar.zst --exclude=""
           python3 scripts/bundles.py unpack av-calibration-ntsc
 
       # rustup reads the channel and wasm32 target from rust-toolchain.toml.

@@ -22,7 +22,14 @@ The menu-only `VIDEO_TS/` is extracted independently of `disc.iso`, so it double
 
 ## Menu bundles
 
-`bundles/<slug>.tar.zst` are the discs' menu bundles (`menuseum bundle`: IFOs and menu VOBs, no film), stored in Git LFS as zstd archives. Menus often repeat the same encoded video, which zstd's long mode finds: 670 MB of bundles take 458 MB. `scripts/bundles.py` extracts them to `bundles/<slug>/` (gitignored), where the player and tests read them; `scripts/dev.sh` runs it. It re-extracts only an archive that changed.
+`bundles/<slug>.tar.zst` are the discs' menu bundles (`menuseum bundle`: IFOs and menu VOBs, no film), stored in Git LFS as zstd archives. A clone doesn't fetch them (`.lfsconfig` excludes them, to spare the repository's LFS bandwidth), so fetch the ones you need:
+
+```sh
+git lfs pull --exclude="" --include fixtures/bundles/av-calibration-ntsc.tar.zst   # the smallest, ~1 MB
+git lfs pull --exclude=""                                                           # all of them, ~670 MB
+git config lfs.fetchexclude ""                                                      # and fetch them from now on
+```
+ Menus often repeat the same encoded video, which zstd's long mode finds: 1.05 GB of bundles take 660 MB. `scripts/bundles.py` extracts them to `bundles/<slug>/` (gitignored), where the player and tests read them; `scripts/dev.sh` runs it. It re-extracts only an archive that changed.
 
 ```sh
 scripts/bundles.py                       # extract missing or stale bundles
