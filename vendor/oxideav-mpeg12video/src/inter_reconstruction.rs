@@ -1961,6 +1961,27 @@ fn write_inter_block(
         ColourComponent::Cr => &mut dest.cr,
     };
 
+    // Local change: a block inside both the plane and the prediction (the
+    // usual case) is written a row at a time, without per-sample checks.
+    let inside = local_x0 + 8 <= mb_plane_width
+        && (local_y0 + 7 * stride) * mb_plane_width + local_x0 + 8 <= pred.len()
+        && plane.row_mut(placement.base_x, placement.base_y + 7 * stride, 8).is_some();
+    if inside {
+        for r in 0..8usize {
+            let p = &pred[(local_y0 + r * stride) * mb_plane_width + local_x0..][..8];
+            let row = plane.row_mut(placement.base_x, placement.base_y + r * stride, 8).expect("checked above");
+            match f_pel {
+                Some(f) => {
+                    for ((d, &p), &f) in row.iter_mut().zip(p).zip(&f[r]) {
+                        *d = saturate(f as i32 + p as i32);
+                    }
+                }
+                None => row.copy_from_slice(p),
+            }
+        }
+        return Ok(());
+    }
+
     for r in 0..8usize {
         let frame_y = placement.base_y + r * stride;
         let local_y = local_y0 + r * stride;

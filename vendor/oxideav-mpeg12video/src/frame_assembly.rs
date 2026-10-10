@@ -133,6 +133,15 @@ impl Plane {
     pub fn put_sample(&mut self, x: usize, y: usize, value: u8) {
         self.put(x, y, value);
     }
+
+    /// Local change: the `len` samples of row `y` from column `x`, if they
+    /// all lie inside the plane, for writers that fill a row at a time.
+    pub(crate) fn row_mut(&mut self, x: usize, y: usize, len: usize) -> Option<&mut [u8]> {
+        if x + len > self.width || y >= self.height {
+            return None;
+        }
+        Some(&mut self.samples[y * self.width + x..][..len])
+    }
 }
 
 /// A reconstructed picture: the three colour-component planes.

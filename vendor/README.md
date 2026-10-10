@@ -20,6 +20,9 @@ From crates.io (MIT, https://github.com/OxideAV/oxideav-mpeg12video). Local chan
   included, all lie inside the reference plane or field is formed a row at
   a time from the plane, rather than sample by sample through the
   pad-to-edge reader. Blocks reaching past an edge take the upstream path.
+- `inter_reconstruction::write_inter_block`: a block inside both the picture
+  and its prediction is written a row at a time (`Plane::row_mut`), rather
+  than sample by sample with bounds checks.
 - `idct::idct_8x8`: performs the same floating-point products and sums as
   upstream's `idct_candidate_f64` (in the same order for every output, so
   the result is bit-identical), but accumulates a row of outputs at a time,
