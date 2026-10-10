@@ -18,6 +18,10 @@ From crates.io (MIT, https://github.com/OxideAV/oxideav-mpeg12video). Local chan
   every codeword width for each coefficient (which was about 70% of decode
   time). The scan remains for the last few bits of a buffer. A test checks
   the tables against the scan for every 16-bit window.
+- `vlc_lut` (new): `LongestFirst`, a table of the row a longest-first VLC walk
+  matches for every window of the longest width. `macroblock_address_increment`
+  (Table B-1), `coded_block_pattern` (B-9) and `motion_code` (B-10) look their
+  codeword up in one when the whole window is available, and walk otherwise.
 - `forming_predictions`: a prediction block whose reads, half-pel neighbours
   included, all lie inside the reference plane or field is formed a row at
   a time from the plane, rather than sample by sample through the

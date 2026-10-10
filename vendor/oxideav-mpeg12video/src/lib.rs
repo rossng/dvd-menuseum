@@ -475,6 +475,7 @@ pub mod spatial_temporal_combine;
 pub mod stream_writer;
 pub mod vbv;
 pub mod video_sequence;
+mod vlc_lut;
 
 // ---------------------------------------------------------------------
 // Stable crate-root surface: whole-stream decode, encoder entry points,

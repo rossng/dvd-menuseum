@@ -39,6 +39,7 @@
 
 use oxideav_core::bits::BitReader;
 
+use crate::vlc_lut::LongestFirst;
 use crate::{Error, Result};
 
 /// One entry of Table B-1: a (right-justified) MSB-first VLC code,
@@ -291,7 +292,19 @@ fn match_b1(br: &mut BitReader<'_>) -> Result<Entry> {
     // Walk from longest to shortest. Equality check on the full
     // codeword bit-width is required because shorter codes will
     // match the high bits of unrelated longer codewords.
-    for &width in &[11u8, 10, 8, 7, 5, 4, 3, 1] {
+    const WIDTHS: [u8; 8] = [11, 10, 8, 7, 5, 4, 3, 1];
+    // Local change: look the row up when the walk's every peek would succeed.
+    static LUT: std::sync::OnceLock<LongestFirst> = std::sync::OnceLock::new();
+    let lut = LUT.get_or_init(|| {
+        let codes: Vec<(u16, u8)> = TABLE_B1.iter().map(|e| (e.code, e.bits)).collect();
+        LongestFirst::build(&codes, &WIDTHS)
+    });
+    if let Some(i) = lut.find(br) {
+        let entry = TABLE_B1[i];
+        br.consume(u32::from(entry.bits)).map_err(|_| Error::ShortHeader)?;
+        return Ok(entry);
+    }
+    for &width in &WIDTHS {
         // Bail out if the bitstream cannot supply `width` bits.
         if br.bits_remaining() < u64::from(width) {
             continue;

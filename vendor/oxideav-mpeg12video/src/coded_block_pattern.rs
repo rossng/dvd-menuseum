@@ -63,6 +63,7 @@
 use oxideav_core::bits::BitReader;
 
 use crate::sequence_extension::ChromaFormat;
+use crate::vlc_lut::LongestFirst;
 use crate::{Error, Result};
 
 /// The decoded `coded_block_pattern()` fields per §6.2.5.3.
@@ -438,7 +439,19 @@ const TABLE_B9: &[Row] = &[
 fn match_cbp(br: &mut BitReader<'_>) -> Result<Row> {
     // Distinct code widths across Table B-9, descending. Walking
     // longest-first guarantees an exact full-width equality match.
-    for &width in &[9u8, 8, 7, 6, 5, 4, 3] {
+    const WIDTHS: [u8; 7] = [9, 8, 7, 6, 5, 4, 3];
+    // Local change: look the row up when the walk's every peek would succeed.
+    static LUT: std::sync::OnceLock<LongestFirst> = std::sync::OnceLock::new();
+    let lut = LUT.get_or_init(|| {
+        let codes: Vec<(u16, u8)> = TABLE_B9.iter().map(|r| (r.code, r.bits)).collect();
+        LongestFirst::build(&codes, &WIDTHS)
+    });
+    if let Some(i) = lut.find(br) {
+        let row = TABLE_B9[i];
+        br.consume(u32::from(row.bits)).map_err(|_| Error::ShortHeader)?;
+        return Ok(row);
+    }
+    for &width in &WIDTHS {
         if br.bits_remaining() < u64::from(width) {
             continue;
         }
