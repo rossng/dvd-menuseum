@@ -16,6 +16,10 @@ From crates.io (MIT, https://github.com/OxideAV/oxideav-mpeg12video). Local chan
   every codeword width for each coefficient (which was about 70% of decode
   time). The scan remains for the last few bits of a buffer. A test checks
   the tables against the scan for every 16-bit window.
+- `forming_predictions`: a prediction block whose reads, half-pel neighbours
+  included, all lie inside the reference plane or field is formed a row at
+  a time from the plane, rather than sample by sample through the
+  pad-to-edge reader. Blocks reaching past an edge take the upstream path.
 - `examples/stream_decode.rs`: decodes an elementary stream through `StreamDecoder`
   in 2 KB chunks, for comparison against `decode_to_yuv` and ffmpeg.
 

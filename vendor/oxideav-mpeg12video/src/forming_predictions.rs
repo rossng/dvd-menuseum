@@ -402,6 +402,10 @@ pub fn predict_block(
     vertical: i32,
 ) -> Vec<u8> {
     let split = split_vector(horizontal, vertical);
+    if let Some((x, y)) = inside(top_left_x, top_left_y, size, split, reference.width, reference.height) {
+        let first = y * reference.width + x;
+        return predict_direct(reference.data, first, reference.width, size, split.pattern());
+    }
     let mut out = Vec::with_capacity(size.width * size.height);
     for row in 0..size.height as i32 {
         for col in 0..size.width as i32 {
@@ -552,6 +556,11 @@ pub fn predict_field_block(
     vertical: i32,
 ) -> Vec<u8> {
     let split = split_vector(horizontal, vertical);
+    let plane = reference.plane;
+    if let Some((x, y)) = inside(top_left_x, top_left_y, size, split, plane.width, reference.field_height) {
+        let first = (2 * y + reference.parity) * plane.width + x;
+        return predict_direct(plane.data, first, 2 * plane.width, size, split.pattern());
+    }
     let mut out = Vec::with_capacity(size.width * size.height);
     for row in 0..size.height as i32 {
         for col in 0..size.width as i32 {
@@ -561,6 +570,52 @@ pub fn predict_field_block(
                 top_left_y + row,
                 split,
             ));
+        }
+    }
+    out
+}
+
+/// Local change: the top-left sample `(x, y)` a block reads from in a
+/// `width × height` plane (or field), if every sample it reads, half-pel
+/// neighbours included, is inside it, so that no read would pad.
+fn inside(
+    top_left_x: i32,
+    top_left_y: i32,
+    size: BlockSize,
+    split: SplitVector,
+    width: usize,
+    height: usize,
+) -> Option<(usize, usize)> {
+    let x = usize::try_from(top_left_x + split.horizontal.int_vec).ok()?;
+    let y = usize::try_from(top_left_y + split.vertical.int_vec).ok()?;
+    let fits_x = x + size.width + split.horizontal.half_flag as usize <= width;
+    let fits_y = y + size.height + split.vertical.half_flag as usize <= height;
+    (fits_x && fits_y).then_some((x, y))
+}
+
+/// Local change: [`predict_block`] for a block that reads only inside the
+/// plane, a row at a time. `first` is the index in `data` of the first
+/// sample read and `step` the distance between the lines read (a frame
+/// row, or two for a field).
+fn predict_direct(data: &[u8], first: usize, step: usize, size: BlockSize, pattern: HalfPattern) -> Vec<u8> {
+    let w = size.width;
+    let mut out = Vec::with_capacity(w * size.height);
+    for row in 0..size.height {
+        let i = first + row * step;
+        match pattern {
+            HalfPattern::Integer => out.extend_from_slice(&data[i..i + w]),
+            HalfPattern::HalfHorizontal => {
+                let a = &data[i..i + w + 1];
+                out.extend(a.windows(2).map(|p| avg2(p[0], p[1])));
+            }
+            HalfPattern::HalfVertical => {
+                let (a, b) = (&data[i..i + w], &data[i + step..i + step + w]);
+                out.extend(a.iter().zip(b).map(|(&p, &q)| avg2(p, q)));
+            }
+            HalfPattern::HalfBoth => {
+                let (a, b) = (&data[i..i + w + 1], &data[i + step..i + step + w + 1]);
+                out.extend(a.windows(2).zip(b.windows(2)).map(|(p, q)| avg4(p[0], p[1], q[0], q[1])));
+            }
         }
     }
     out
@@ -1049,5 +1104,40 @@ mod tests {
         let a = split_reconstructed(horiz, vert);
         let b = split_vector(3, -3);
         assert_eq!(a, b);
+    }
+
+    /// Local change: the direct path for blocks inside the plane forms
+    /// the same samples as the per-sample path, at and past every edge.
+    #[test]
+    fn predict_blocks_match_per_sample_prediction() {
+        let (w, h) = (24usize, 20usize);
+        let data: Vec<u8> = (0..w * h).map(|i| (i * 7919 % 251) as u8).collect();
+        let p = plane(&data, w, h);
+        for size in [BlockSize::new(16, 16).unwrap(), BlockSize::new(8, 4).unwrap()] {
+            for (x, y) in [(0, 0), (8, 4), (8, 6), (16, 12), (-2, 3)] {
+                for mv_x in -6..=6 {
+                    for mv_y in -6..=6 {
+                        let split = split_vector(mv_x, mv_y);
+                        let mut want = vec![];
+                        for row in 0..size.height as i32 {
+                            for col in 0..size.width as i32 {
+                                want.push(predict_sample(p, x + col, y + row, split));
+                            }
+                        }
+                        assert_eq!(predict_block(p, x, y, size, mv_x, mv_y), want);
+                        for parity in 0..2 {
+                            let f = FieldReference::new(p, parity).unwrap();
+                            let mut want = vec![];
+                            for row in 0..size.height as i32 {
+                                for col in 0..size.width as i32 {
+                                    want.push(predict_field_sample(f, x + col, y / 2 + row, split));
+                                }
+                            }
+                            assert_eq!(predict_field_block(f, x, y / 2, size, mv_x, mv_y), want);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
