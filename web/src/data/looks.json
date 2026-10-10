@@ -1,0 +1,125 @@
+{
+  "sita-sings-the-blues-pal": {
+    "palette": [
+      "#314353",
+      "#4c6880",
+      "#77aad8"
+    ],
+    "widescreen": true,
+    "archive": "0acbca7969be023049ee3b7b7ef114dfd6634430ae05f743c4c76e83c9745698"
+  },
+  "elephants-dream-pal": {
+    "palette": [
+      "#2b1c08",
+      "#684412",
+      "#c69939"
+    ],
+    "widescreen": true,
+    "archive": "371ba62f0aae9db56997f9e5719f9bae710af679d5e1ff682a0f658e16774059",
+    "menu": {
+      "inputs": "activate"
+    }
+  },
+  "elephants-dream-ntsc": {
+    "palette": [
+      "#2b1a08",
+      "#683f12",
+      "#c69939"
+    ],
+    "widescreen": true,
+    "archive": "4bb08a6f71e932cb773c19eae73f2c5db2984dc1620fc26b05c56c4970c2a0bf",
+    "menu": {
+      "inputs": "activate"
+    }
+  },
+  "big-buck-bunny-pal": {
+    "palette": [
+      "#315334",
+      "#4c8051",
+      "#3995c6"
+    ],
+    "widescreen": true,
+    "archive": "6f6e676b108427d63463beeffc41b0ddb42f11eeaf1510aedba80189a746c38a"
+  },
+  "big-buck-bunny-ntsc": {
+    "palette": [
+      "#335241",
+      "#4f7d64",
+      "#3995c6"
+    ],
+    "widescreen": true,
+    "archive": "398e689ff8684555abc969cc2627ad8cdf54575ac46be365afdc85f1cec39e8d"
+  },
+  "sintel-pal": {
+    "palette": [
+      "#1e1516",
+      "#473334",
+      "#d9ac7d"
+    ],
+    "widescreen": true,
+    "archive": "abf526a5f5a60305abcb4bd7d21057323a36ef6249ce4c52a7e557cfc8f7fe70"
+  },
+  "sintel-ntsc": {
+    "palette": [
+      "#211214",
+      "#4f2b30",
+      "#daad81"
+    ],
+    "widescreen": true,
+    "archive": "510adcfec7d60201e72eba8a182feffdd9e85f3d3e2023708d23606d7a9ef801"
+  },
+  "nina-vision": {
+    "palette": [
+      "#285d28",
+      "#3d8f3e",
+      "#04fb05"
+    ],
+    "widescreen": false,
+    "archive": "e549da435b0ac6ccb6df4f8078a9668aa857430e5c17c9fcaaa4bc89fb51d4cd"
+  },
+  "valkaama-pal": {
+    "palette": [
+      "#1e151d",
+      "#493145",
+      "#c67639"
+    ],
+    "widescreen": true,
+    "archive": "c8a884c4a320b194e88b4309f0b72e956ae0526bc77d1baa18666408b148310e"
+  },
+  "bloodspell-1": {
+    "palette": [
+      "#120f24",
+      "#2b2456",
+      "#fe0101"
+    ],
+    "widescreen": false,
+    "archive": "bb32f0a7752ea80b25664c7837a7496da031766f14fa3ba093497236ad5081bc"
+  },
+  "bloodspell-2": {
+    "palette": [
+      "#0c0b28",
+      "#1d1b60",
+      "#fe0101"
+    ],
+    "widescreen": false,
+    "archive": "2cdaac658d5247f17ece12c6ed5707c0a009b928c7a3b657f8fd648613f59182"
+  },
+  "av-calibration-pal": {
+    "palette": [
+      "#24220f",
+      "#565325",
+      "#fef45d"
+    ],
+    "widescreen": true,
+    "archive": "469306aedcdf4b79b64c290178113b67ee709cdb8564893c1052724e0dddc793"
+  },
+  "av-calibration-ntsc": {
+    "palette": [
+      "#24220f",
+      "#565325",
+      "#fef45d"
+    ],
+    "widescreen": true,
+    "archive": "b2b2ebd497dcff2a3de29f79d2ef8f1ee100f1d6cc3858c9fbc1cc451d3705fb"
+  }
+}

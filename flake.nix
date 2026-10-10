@@ -48,7 +48,7 @@
             pkgs.pkg-config
             pkgs.libdvdread
 
-            # scripts/: bundles.py, fetch_discs.py, difftest.py, serve.py, site.py, dev.sh
+            # scripts/: bundles.py, fetch_discs.py, difftest.py, looks.py, notices.py, serve.py, dev.sh
             pkgs.python3
             pkgs.zstd
             pkgs.curl

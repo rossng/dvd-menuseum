@@ -28,28 +28,13 @@ The menu-only `VIDEO_TS/` is extracted independently of `disc.iso`, so it double
 scripts/bundles.py                       # extract missing or stale bundles
 menuseum bundle fixtures/discs/<slug>/disc.iso --out fixtures/bundles/<slug>
 scripts/bundles.py pack <slug>           # then commit fixtures/bundles/<slug>.tar.zst
+scripts/looks.py                         # and web/src/data/looks.json
 ```
 
-Packing is reproducible, so an unchanged bundle repacks to the identical archive.
+Packing is reproducible, so an unchanged bundle repacks to the identical archive. `scripts/looks.py` samples each disc's look on the site from its bundle (its label's colours, and the shape of its first picture) with the `menuseum` CLI, and re-samples a disc whose archive or `menu` options change; CI checks the looks are current.
 
 ## Discs
 
-| Slug | System | Licence | Credit | Why it's here |
-|---|---|---|---|---|
-| `elephants-dream-pal` | PAL | film CC BY 2.5 | Orange Open Movie Project, Blender Foundation and Netherlands Media Art Institute, 2006 | Professionally authored; 9 VTSs; ~180 MB motion menu |
-| `elephants-dream-ntsc` | NTSC | film CC BY 2.5 | as above | Same disc for NTSC |
-| `sita-sings-the-blues-pal` | PAL | film CC BY-SA 3.0 / CC0 | Nina Paley | Similar structure to Elephants Dream (5 VTSs, ~190 MB motion menu) |
-| `nina-vision` | NTSC | CC BY-SA 3.0 | Nina Paley (animation), Terry Hancock (DVD) | Hand-authored; 125 MB looping VMGM motion menu |
-| `av-calibration-pal` | PAL | CC BY-NC-SA 3.0 | Shaul Livshits | Test-pattern disc; no VMGM menu VOB |
-| `av-calibration-ntsc` | NTSC | CC BY-NC-SA 3.0 | Shaul Livshits | Same disc for NTSC |
-| `big-buck-bunny-ntsc` | NTSC | CC BY 3.0 | Blender Foundation, 2008 | Official Peach DVD; 14 VTSs; ~82 MB motion menu |
-| `big-buck-bunny-pal` | PAL | CC BY 3.0 | as above | Same disc for PAL; 11 VTSs |
-| `sintel-pal` | PAL | film CC BY 3.0 | Blender Foundation, 2010 | Official Durian box set's film disc; 7 VTSs; ~86 MB motion menu |
-| `sintel-ntsc` | NTSC | film CC BY 3.0 | as above | Same disc for NTSC |
-| `valkaama-pal` | PAL | film CC BY-SA 3.0 | Tim Baumann, 2010 | Indie feature; single VTS, 28 MB menu |
-| `bloodspell-1` | NTSC | CC BY-NC 2.5 Scotland | Strange Company, 2007 | Machinima feature; 3 VTSs |
-| `bloodspell-2` | NTSC | CC BY-NC 2.5 Scotland | as above | Extras disc; 17 VTSs with small menus, so lots of navigation between them |
-
-Credits are as given on the archive.org items (`archive_id` in `discs.json`). The Elephants Dream and Sita uploads carry no licence tag of their own, and the Sintel and Valkaama uploads are tagged with a 4.0 licence. The licences above are those of the films, which their makers released freely.
+`discs.json` is the one list of discs, in the order the site's shelf shows them. Each has the licence its menus keep (`license`: the film's, which its maker released freely), the attribution that asks for (`credit`), where it comes from (`archive_id`, the archive.org item, and `image`), and why it's here (`notes`, which also say where an upload is tagged with a different licence or none). Credits are as given on the archive.org items. The site's title, maker, year, `part` and `blurb` for each disc are there too.
 
 The menu bundles in `bundles/` are adapted from these discs (stripped of their titles) and keep each disc's licence. The `av-calibration-*` bundles are NonCommercial and ShareAlike; the `bloodspell-*` bundles are NonCommercial.

@@ -51,6 +51,9 @@ jobs:
       - name: Check the player's third-party notices are current
         run: python3 scripts/notices.py --check
 
+      - name: Check the discs' looks are current
+        run: python3 scripts/looks.py --check
+
       # The site with the smoke-test bundle only, in headless Chrome (which
       # the runner image has).
       - uses: actions/setup-node@v4
@@ -59,11 +62,13 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Build the site
+        env:
+          DISCS: av-calibration-ntsc
         run: |
           mkdir -p web/pkg
           cp target/wasm32-unknown-unknown/release/menuseum_wasm.wasm web/pkg/
-          cargo build --locked -p menuseum-cli
-          (cd web && npm ci)
-          python3 scripts/site.py --discs av-calibration-ntsc --menuseum target/debug/menuseum --out target/site
+          cd web
+          npm ci
+          npm run build -- --outDir ../target/site
       - name: Smoke-test the site
         run: node scripts/site-smoke.mjs target/site

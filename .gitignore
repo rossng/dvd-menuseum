@@ -12,8 +12,7 @@ __pycache__/
 .lfs-objects
 _site/
 
-# web/: dependencies, the catalog scripts/site.py writes, and Astro's caches
+# web/: dependencies, and Astro's output and caches
 web/node_modules/
-web/src/catalog.json
 web/dist/
 web/.astro/

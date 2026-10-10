@@ -31,7 +31,7 @@ Karpelès Lab Inc., and a few of their dependencies, all used under MIT).
 `web/src/data/notices.json`, and CI checks the list is current. The site shows
 them on its notices page (`web/src/pages/notices.astro`, linked from every
 page's footer), which also links the source of the commit the site was built
-from (`scripts/site.py` records it in the catalog).
+from (`web/catalog.mjs` records it in the catalog).
 
 Only the web player is distributed so far. A release of the `menuseum` binary
 would need the same notices shipped beside it.
@@ -40,7 +40,7 @@ would need the same notices shipped beside it.
 
 The menu bundles keep each disc's Creative Commons licence (see
 [fixtures/README.md](fixtures/README.md)). The site credits each disc as
-`credit` in `web/discs.json`, links its licence, and says the menus are
+`credit` in `fixtures/discs.json`, links its licence, and says the menus are
 adapted from the discs. The `av-calibration-*` and `bloodspell-*` discs are
 NonCommercial, so the site must not carry advertising or be run commercially
 while it serves them.

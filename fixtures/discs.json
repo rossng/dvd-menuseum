@@ -1,132 +1,182 @@
 {
-  "_comment": "Freely licensed DVD-Video images on archive.org. Fetched into fixtures/discs/<slug>/ by scripts/fetch_discs.py (gitignored).",
+  "_comment": "The discs: freely licensed DVD-Video images on archive.org, in the order of the site's shelf. Discs with the same title (a film's PAL and NTSC discs, or the discs of a set) stack in one place on the shelf, told apart by `system` and, for a set, `part`. `credit` is the attribution the disc's licence asks for. scripts/fetch_discs.py fetches `image` from the archive.org item `archive_id`. `menu` holds `menuseum render` options (inputs, NAV packs to settle) for discs whose first menu isn't the one their label's colours are sampled from (scripts/looks.py).",
   "discs": [
     {
-      "slug": "elephants-dream-pal",
-      "title": "Elephants Dream (2006 official DVD, disc 1)",
+      "slug": "sita-sings-the-blues-pal",
+      "title": "Sita Sings the Blues",
+      "year": 2008,
+      "maker": "Nina Paley",
       "system": "PAL",
+      "license": "CC BY-SA 3.0",
+      "credit": "Nina Paley",
+      "blurb": "Nina Paley's animated Ramayana, set to 1920s jazz recordings.",
+      "archive_id": "SitaSingsTheBluesPalDvdImage",
+      "image": "SITA_PAL_DVD.img",
+      "notes": ".img not browsable on archive.org; fetched via HTTP range reads of the ISO 9660 filesystem. The upload carries no licence tag; the film is CC BY-SA 3.0 (later CC0)."
+    },
+    {
+      "slug": "elephants-dream-pal",
+      "title": "Elephants Dream",
+      "year": 2006,
+      "maker": "Orange Open Movie Project",
+      "system": "PAL",
+      "license": "CC BY 2.5",
+      "credit": "Orange Open Movie Project, Blender Foundation and Netherlands Media Art Institute",
+      "blurb": "The official disc of the first Blender open movie. Nine title sets and a long motion menu.",
       "archive_id": "elephans-dream-iso",
       "image": "Elephans Dream Disk 1 PAL.ISO",
-      "license": "Film CC BY 2.5 (Orange Open Movie Project); upload carries no licence tag",
-      "notes": "9 VTSs; VTS_01_0.VOB is a ~180 MB motion menu"
+      "notes": "9 VTSs; VTS_01_0.VOB is a ~180 MB motion menu. The upload carries no licence tag; the film is CC BY 2.5.",
+      "menu": {
+        "inputs": "activate"
+      }
     },
     {
       "slug": "elephants-dream-ntsc",
-      "title": "Elephants Dream (2006 official DVD, disc 2)",
+      "title": "Elephants Dream",
+      "year": 2006,
+      "maker": "Orange Open Movie Project",
       "system": "NTSC",
+      "license": "CC BY 2.5",
+      "credit": "Orange Open Movie Project, Blender Foundation and Netherlands Media Art Institute",
+      "blurb": "The NTSC disc of the official release.",
       "archive_id": "elephans-dream-iso",
       "image": "Elephans Dream Disk 2 NTSC.ISO",
-      "license": "Film CC BY 2.5 (Orange Open Movie Project); upload carries no licence tag",
-      "notes": "8 VTSs; NTSC counterpart of disc 1"
-    },
-    {
-      "slug": "nina-vision",
-      "title": "Nina Vision (DVD ISO with Menus)",
-      "system": "NTSC",
-      "archive_id": "NinaVisionDVD",
-      "image": "NINAVISION-dvd-image-fixed20110908.iso",
-      "license": "CC BY-SA 3.0",
-      "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
-      "notes": "Hand-authored by Terry Hancock; 125 MB looping VMGM motion menu"
-    },
-    {
-      "slug": "av-calibration-pal",
-      "title": "AV calibration PAL DVD (beta 1)",
-      "system": "PAL",
-      "archive_id": "AvCalibrationPalDvd",
-      "image": "Calibration_DVD_beta1_PAL1.iso",
-      "license": "CC BY-NC-SA 3.0",
-      "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
-      "notes": "No VIDEO_TS.VOB (VMGM has no menu VOBs); menus live in VTS_01_0"
-    },
-    {
-      "slug": "av-calibration-ntsc",
-      "title": "AV calibration NTSC DVD (beta 1)",
-      "system": "NTSC",
-      "archive_id": "AvCalibrationNtscDvd",
-      "image": "Calibration_DVD_beta1_NTSC1.iso",
-      "license": "CC BY-NC-SA 3.0",
-      "license_url": "http://creativecommons.org/licenses/by-nc-sa/3.0/",
-      "notes": "NTSC counterpart"
-    },
-    {
-      "slug": "sita-sings-the-blues-pal",
-      "title": "Sita Sings the Blues PAL DVD Image",
-      "system": "PAL",
-      "archive_id": "SitaSingsTheBluesPalDvdImage",
-      "image": "SITA_PAL_DVD.img",
-      "license": "Film CC BY-SA 3.0 (later CC0); upload carries no licence tag",
-      "notes": ".img not browsable on archive.org; fetched via HTTP range reads of the ISO 9660 filesystem"
-    },
-    {
-      "slug": "big-buck-bunny-ntsc",
-      "title": "Big Buck Bunny (2008 official DVD, NTSC)",
-      "system": "NTSC",
-      "archive_id": "BigBuckBunny",
-      "image": "big-buck-bunny-NTSC.iso",
-      "license": "Film CC BY 3.0 (Blender Foundation), which covers everything on the DVDs",
-      "license_url": "http://creativecommons.org/licenses/by/3.0/",
-      "notes": "Professionally authored; 14 VTSs; VTS_01_0.VOB is an ~82 MB motion menu"
+      "notes": "8 VTSs; NTSC counterpart of disc 1. The upload carries no licence tag; the film is CC BY 2.5.",
+      "menu": {
+        "inputs": "activate"
+      }
     },
     {
       "slug": "big-buck-bunny-pal",
-      "title": "Big Buck Bunny (2008 official DVD, PAL)",
+      "title": "Big Buck Bunny",
+      "year": 2008,
+      "maker": "Blender Foundation",
       "system": "PAL",
+      "license": "CC BY 3.0",
+      "credit": "Blender Foundation (www.bigbuckbunny.org)",
+      "blurb": "The official disc of Peach, the second Blender open movie. Eleven title sets behind a motion menu.",
       "archive_id": "BigBuckBunny",
       "image": "big-buck-bunny-PAL.iso",
-      "license": "Film CC BY 3.0 (Blender Foundation), which covers everything on the DVDs",
-      "license_url": "http://creativecommons.org/licenses/by/3.0/",
-      "notes": "11 VTSs; PAL counterpart, ~78 MB motion menu"
+      "notes": "11 VTSs; PAL counterpart, ~78 MB motion menu. The film's CC BY 3.0 covers everything on the DVDs."
+    },
+    {
+      "slug": "big-buck-bunny-ntsc",
+      "title": "Big Buck Bunny",
+      "year": 2008,
+      "maker": "Blender Foundation",
+      "system": "NTSC",
+      "license": "CC BY 3.0",
+      "credit": "Blender Foundation (www.bigbuckbunny.org)",
+      "blurb": "The NTSC disc of the official release.",
+      "archive_id": "BigBuckBunny",
+      "image": "big-buck-bunny-NTSC.iso",
+      "notes": "Professionally authored; 14 VTSs; VTS_01_0.VOB is an ~82 MB motion menu. The film's CC BY 3.0 covers everything on the DVDs."
     },
     {
       "slug": "sintel-pal",
-      "title": "Sintel (2010 4-DVD box set, PAL disc)",
+      "title": "Sintel",
+      "year": 2010,
+      "maker": "Blender Foundation",
       "system": "PAL",
+      "license": "CC BY 3.0",
+      "credit": "Blender Foundation (www.sintel.org)",
+      "blurb": "The film disc from the box set of Durian, the third Blender open movie.",
       "archive_id": "sintel-dvd",
       "image": "Sintel_PAL.iso",
-      "license": "Film CC BY 3.0 (Blender Foundation); upload tagged CC BY 4.0",
-      "license_url": "http://creativecommons.org/licenses/by/3.0/",
-      "notes": "7 VTSs; ~86 MB motion menu. The box's EXTRAS and DATA discs aren't DVD-Video"
+      "notes": "7 VTSs; ~86 MB motion menu. The box's EXTRAS and DATA discs aren't DVD-Video. The upload is tagged CC BY 4.0; the film is CC BY 3.0."
     },
     {
       "slug": "sintel-ntsc",
-      "title": "Sintel (2010 4-DVD box set, NTSC disc)",
+      "title": "Sintel",
+      "year": 2010,
+      "maker": "Blender Foundation",
       "system": "NTSC",
+      "license": "CC BY 3.0",
+      "credit": "Blender Foundation (www.sintel.org)",
+      "blurb": "The NTSC film disc from the box set.",
       "archive_id": "sintel-dvd",
       "image": "Sintel_NTSC.iso",
-      "license": "Film CC BY 3.0 (Blender Foundation); upload tagged CC BY 4.0",
-      "license_url": "http://creativecommons.org/licenses/by/3.0/",
-      "notes": "7 VTSs; NTSC counterpart, ~92 MB motion menu"
+      "notes": "7 VTSs; NTSC counterpart, ~92 MB motion menu. The upload is tagged CC BY 4.0; the film is CC BY 3.0."
+    },
+    {
+      "slug": "nina-vision",
+      "title": "Nina Vision",
+      "year": 2011,
+      "maker": "Nina Paley",
+      "system": "NTSC",
+      "license": "CC BY-SA 3.0",
+      "credit": "Nina Paley (animation), Terry Hancock (DVD)",
+      "blurb": "Six short films by Nina Paley. Authored by hand by Terry Hancock, with a looping motion menu.",
+      "archive_id": "NinaVisionDVD",
+      "image": "NINAVISION-dvd-image-fixed20110908.iso",
+      "notes": "Hand-authored by Terry Hancock; 125 MB looping VMGM motion menu."
     },
     {
       "slug": "valkaama-pal",
-      "title": "Valkaama (DVD, PAL)",
+      "title": "Valkaama",
+      "year": 2010,
+      "maker": "Tim Baumann",
       "system": "PAL",
+      "license": "CC BY-SA 3.0",
+      "credit": "Tim Baumann (www.valkaama.com)",
+      "blurb": "An open-source feature film: a road movie from Sweden to northern Finland.",
       "archive_id": "valkaama",
       "image": "Valkaama_DVD_PAL.iso",
-      "license": "Film CC BY-SA 3.0 (Tim Baumann); upload tagged CC BY-SA 4.0",
-      "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
-      "notes": "1 VTS; 28 MB menu VOB"
+      "notes": "1 VTS; 28 MB menu VOB. The upload is tagged CC BY-SA 4.0; the film is CC BY-SA 3.0."
     },
     {
       "slug": "bloodspell-1",
-      "title": "BloodSpell: Special Edition DVD (NTSC, disc 1)",
+      "title": "BloodSpell",
+      "part": "Disc 1",
+      "year": 2007,
+      "maker": "Strange Company",
       "system": "NTSC",
+      "license": "CC BY-NC 2.5 Scotland",
+      "credit": "Strange Company",
+      "blurb": "Strange Company's machinima punk fantasy, made in Neverwinter Nights.",
       "archive_id": "BloodSpell_NTSC_DVD",
       "image": "BloodSpell_Disc_1_NTSC.iso",
-      "license": "CC BY-NC 2.5 Scotland",
-      "license_url": "http://creativecommons.org/licenses/by-nc/2.5/scotland/",
-      "notes": "Uploaded by Strange Company; 3 VTSs, 22 MB menu VOB"
+      "notes": "Uploaded by Strange Company; 3 VTSs, 22 MB menu VOB."
     },
     {
       "slug": "bloodspell-2",
-      "title": "BloodSpell: Special Edition DVD (NTSC, disc 2)",
+      "title": "BloodSpell",
+      "part": "Disc 2",
+      "year": 2007,
+      "maker": "Strange Company",
       "system": "NTSC",
+      "license": "CC BY-NC 2.5 Scotland",
+      "credit": "Strange Company",
+      "blurb": "The special edition's extras disc: seventeen title sets of making-of features, bloopers and more.",
       "archive_id": "BloodSpell_NTSC_DVD",
       "image": "BloodSpell_Disc_2_NTSC.iso",
-      "license": "CC BY-NC 2.5 Scotland",
-      "license_url": "http://creativecommons.org/licenses/by-nc/2.5/scotland/",
-      "notes": "Extras disc; 17 VTSs with small menus, so lots of cross-VTS navigation"
+      "notes": "Extras disc; 17 VTSs with small menus, so lots of cross-VTS navigation."
+    },
+    {
+      "slug": "av-calibration-pal",
+      "title": "AV Calibration",
+      "year": null,
+      "maker": "Beta 1",
+      "system": "PAL",
+      "license": "CC BY-NC-SA 3.0",
+      "credit": "Shaul Livshits",
+      "blurb": "Test patterns and tones for setting up a TV and speakers.",
+      "archive_id": "AvCalibrationPalDvd",
+      "image": "Calibration_DVD_beta1_PAL1.iso",
+      "notes": "No VIDEO_TS.VOB (VMGM has no menu VOBs); menus live in VTS_01_0."
+    },
+    {
+      "slug": "av-calibration-ntsc",
+      "title": "AV Calibration",
+      "year": null,
+      "maker": "Beta 1",
+      "system": "NTSC",
+      "license": "CC BY-NC-SA 3.0",
+      "credit": "Shaul Livshits",
+      "blurb": "The NTSC version of the calibration disc.",
+      "archive_id": "AvCalibrationNtscDvd",
+      "image": "Calibration_DVD_beta1_NTSC1.iso",
+      "notes": "NTSC counterpart."
     }
   ]
 }

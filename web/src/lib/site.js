@@ -1,8 +1,8 @@
-// What the pages know at build time: the catalog (written by
-// scripts/site.py: web/discs.json joined with bundle facts, and `source`, the
-// commit the site was built from) and where things are under the site's base.
+// What the pages know at build time: the catalog (see catalog.mjs: the discs
+// joined with their bundles' facts and their looks, and `source`, the commit
+// the site was built from) and where things are under the site's base.
 
-import catalog from "../catalog.json";
+import catalog from "virtual:catalog";
 
 export const { discs, source } = catalog;
 
@@ -21,10 +21,11 @@ export function variant(stack, d) {
   return ["part", "system"].filter(varies).map((k) => d[k]).join(" · ");
 }
 
-export const playUrl =(d) => url(`play/${encodeURIComponent(d.slug)}/`);
+export const playUrl = (d) => url(`play/${encodeURIComponent(d.slug)}/`);
 
-// The deed of a Creative Commons licence name ("CC BY-SA 3.0"), if it is one.
+// The deed of a Creative Commons licence name ("CC BY-SA 3.0", or ported to
+// a jurisdiction: "CC BY-NC 2.5 Scotland"), if it is one.
 export function licenceDeed(name) {
-  const cc = /^CC ((?:BY|NC|SA|ND)(?:-(?:BY|NC|SA|ND))*) (\d\.\d)$/.exec(name ?? "");
-  return cc && `https://creativecommons.org/licenses/${cc[1].toLowerCase()}/${cc[2]}/`;
+  const cc = /^CC ((?:BY|NC|SA|ND)(?:-(?:BY|NC|SA|ND))*) (\d\.\d)(?: ([A-Za-z]+))?$/.exec(name ?? "");
+  return cc && `https://creativecommons.org/licenses/${cc[1].toLowerCase()}/${cc[2]}/${cc[3] ? `${cc[3].toLowerCase()}/` : ""}`;
 }

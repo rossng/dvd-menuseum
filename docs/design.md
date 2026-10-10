@@ -46,12 +46,15 @@ crates/
 vendor/    oxideav-mpeg12video with StreamDecoder.
 oracle/    libdvdnav built from source, with the same trace format.
 web/       The website, an Astro site rendered statically from the catalog
-           (scripts/site.py builds it and places the bundles beside it): the
-           disc shelf, a player page per disc, one for the viewer's own DVD
-           and the test harness, sharing src/player/player.js (video
-           converted from YCbCr in a WebGL 2 shader, or RGBA from the
-           decoder without it; overlay, Web Audio, input). Everything it
-           loads comes from the site itself, under a content security policy;
+           (catalog.mjs: fixtures/discs.json with each bundle's facts and
+           its look, sampled by scripts/looks.py), with the bundles copied
+           beside it: the disc shelf, a player page per disc and one for the
+           viewer's own DVD (which, given ?bundle=, is the test harness).
+           src/player/: page.js drives player.js (video converted from YCbCr
+           in a WebGL 2 shader, or RGBA from the decoder without it; overlay,
+           Web Audio), which runs player-worker.js (the wasm module through
+           abi.js, a disc from discs.js). Everything it loads comes from the
+           site itself, under a content security policy;
            scripts/site-smoke.mjs checks every page in headless Chrome.
 ```
 
@@ -67,7 +70,7 @@ A bundle is the disc with its film removed:
 |---|---|
 | `VIDEO_TS/VIDEO_TS.IFO`, `VTS_nn_0.IFO` | verbatim |
 | `VIDEO_TS/VIDEO_TS.VOB`, `VTS_nn_0.VOB` | menu VOB sets, verbatim |
-| `bundle.json` | manifest for the web player: files and sizes, video format |
+| `bundle.json` | manifest for the web player: its files and their sizes, and the authoring tool (`provider`) |
 
 Title VOB sets (`VTS_nn_1..9.VOB`, the film) are left out. Their cells play as a short "not included" placeholder, so post-commands still run and menus still return. Menu VOBs are kept whole, so the bundle plays exactly as the disc's menus do.
 

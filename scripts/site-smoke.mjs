@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Smoke-test a built site (scripts/site.py) in headless Chrome: serve it,
-// load every page, and fail on any exception, console error, failed request
-// or content security policy violation. The disc pages must load their disc
-// (the Play button lights), the local page likewise when given a bundle, and
-// the first disc must play into its menus.
+// Smoke-test a built site (`npm run build` in web/) in headless Chrome: serve
+// it, load every page, and fail on any exception, console error, failed
+// request or content security policy violation. The disc pages must load
+// their disc (the Play button lights), the local page likewise when given a
+// bundle, and the first disc must play into its menus.
 //
 // usage: node scripts/site-smoke.mjs <site dir> [--base PATH] [--chrome PATH]
 //   --base    the base path the site was built for (default $BASE_PATH or /)
