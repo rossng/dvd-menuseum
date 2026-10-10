@@ -13,7 +13,7 @@ trait in `menuseum-core` so that nothing else needs it.
 | `crates/cli/` | GPL-2.0-or-later | the `menuseum` binary links the engine |
 | `crates/wasm/` | GPL-2.0-or-later | the browser player links the engine |
 | `oracle/` | GPL-2.0-or-later | built against libdvdnav's internal headers |
-| `vendor/oxideav-mpeg12video/` | MIT | third-party, with local changes ([its LICENSE](vendor/oxideav-mpeg12video/LICENSE)) |
+| `vendor/oxideav-mpeg12video/` | MIT | third-party; our local changes are MIT too ([its LICENSE](vendor/oxideav-mpeg12video/LICENSE)) |
 | `fixtures/bundles/*.tar.zst` | per disc, CC | disc content; see [fixtures/README.md](fixtures/README.md) |
 
 `menuseum-core`, `menuseum-lpcm` and `menuseum-media` don't depend on the engine
@@ -27,4 +27,17 @@ Whoever distributes them must offer the corresponding source and pass on the
 notices of what they contain: the licences in this repository and the MIT
 notices of the oxideav crates (`oxideav-core`, `oxideav-ac3`, `oxideav-dts`,
 `oxideav-mp2` and the vendored `oxideav-mpeg12video`, all Copyright (c) 2026
-Karpelès Lab Inc.). The web player lists them in [web/NOTICE.md](web/NOTICE.md).
+Karpelès Lab Inc.). The web player lists them in [web/NOTICE.md](web/NOTICE.md),
+and the site's Licences dialog links the source of the commit it was built from
+(`scripts/site.py` records it in `catalog.json`).
+
+Only the web player is distributed so far. A release of the `menuseum` binary
+would need the same notices shipped beside it.
+
+## Disc menus
+
+The menu bundles keep each disc's Creative Commons licence (see
+[fixtures/README.md](fixtures/README.md)). The site credits each disc as
+`credit` in `web/discs.json`, links its licence, and says the menus are
+adapted from the discs. The `av-calibration-*` discs are NonCommercial, so the
+site must not carry advertising or be run commercially while it serves them.

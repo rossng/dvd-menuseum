@@ -74,8 +74,18 @@ export function light(el) {
   };
 }
 
-// The licences of everything the site serves. `link` opens it.
-export function licences(link, discs) {
+const GPL = `<a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" rel="noopener">GPL-2.0-or-later</a>`;
+
+// A Creative Commons licence name ("CC BY-SA 3.0"), linked to its deed.
+export function licenceLink(name) {
+  const cc = /^CC ((?:BY|NC|SA|ND)(?:-(?:BY|NC|SA|ND))*) (\d\.\d)$/.exec(name ?? "");
+  if (!cc) return esc(name);
+  return `<a href="https://creativecommons.org/licenses/${cc[1].toLowerCase()}/${cc[2]}/" rel="noopener">${esc(name)}</a>`;
+}
+
+// The licences of everything the site serves. `link` opens it; `source` is
+// where the player's source code is, for the GPL.
+export function licences(link, discs, source) {
   const dialog = document.createElement("dialog");
   dialog.className = "glass";
   dialog.setAttribute("aria-labelledby", "licences-title");
@@ -86,8 +96,8 @@ export function licences(link, discs) {
       <h3>Software</h3>
       <table>
         ${row("This website", `<a href="https://blueoakcouncil.org/license/1.0.0" rel="noopener">Blue Oak Model License 1.0.0</a>`)}
-        ${row("DVD player (WebAssembly)", "GPL-2.0-or-later")}
-        ${row("&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham", "GPL-2.0-or-later")}
+        ${row(`DVD player (WebAssembly): <a href="${esc(source)}" rel="noopener">source code</a>`, GPL)}
+        ${row("&nbsp;&nbsp;libdvdnav-derived navigation, © Håkan Hjort, Rich Wareham", GPL)}
         ${row("&nbsp;&nbsp;oxideav decoders, © Karpelès Lab Inc.", "MIT")}
         ${row("&nbsp;&nbsp;bytemuck, memchr, itoa, thiserror, zmij, serde_core, serde_json", "MIT")}
         ${row(`<a href="https://www.rossng.eu/seal-of-slop/" rel="noopener">Seal of Slop</a>`, `<a href="https://blueoakcouncil.org/license/1.0.0" rel="noopener">Blue Oak Model License 1.0.0</a>`)}
@@ -95,8 +105,9 @@ export function licences(link, discs) {
       </table>
       <p><a href="NOTICE.md">Full notices</a></p>
       <h3>Discs</h3>
+      <p>The menus are taken from the original discs, without their films.</p>
       <table>
-        ${discs.map((d) => row(`<a href="${esc(d.source)}" rel="noopener">${esc(d.title)}</a> <span class="faint">${esc(d.system)}</span>`, esc(d.license))).join("")}
+        ${discs.map((d) => row(`<a href="${esc(d.source)}" rel="noopener">${esc(d.title)}</a> <span class="faint">${esc(d.system)}</span><br><span class="faint">${esc(d.credit)}</span>`, licenceLink(d.license))).join("")}
       </table>
     </div>`;
   document.body.append(dialog);

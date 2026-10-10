@@ -17,7 +17,9 @@ keyed on the bundle and render options, so only changed discs are re-rendered.
 DIR/
   index.html, play.html, ...   from web/
   bundles/<slug>/              the menu bundles the player streams
-  catalog.json                 web/discs.json joined with bundle facts
+  catalog.json                 web/discs.json joined with bundle facts, and
+                               `source`, the commit the site was built from
+                               (the GPL source offer for the player)
 """
 
 import argparse
@@ -36,6 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 BUNDLES = ROOT / "fixtures" / "bundles"
 PALETTE_CACHE = ROOT / "target" / "palettes"
+REPO = "https://github.com/rossng/dvd-menuseum"
 SKIP = {"discs.json"}  # web/ sources that aren't served as-is
 
 
@@ -124,6 +127,15 @@ def menu_palette(menuseum, slug, bundle, opts):
     return colours
 
 
+def source():
+    """Where the source of this build is: the commit checked out."""
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return REPO
+    return f"{REPO}/tree/{commit}"
+
+
 def facts(bundle):
     """What the catalog says about a bundle beyond web/discs.json."""
     manifest = json.loads((bundle / "bundle.json").read_text())
@@ -169,7 +181,7 @@ def main():
         entry = {k: v for k, v in disc.items() if k != "menu"}
         entry.update(facts(bundle), bundle=f"bundles/{slug}/", palette=menu_palette(args.menuseum, slug, bundle, disc.get("menu", {})))
         catalog.append(entry)
-    (out / "catalog.json").write_text(json.dumps({"discs": catalog}, indent=2) + "\n")
+    (out / "catalog.json").write_text(json.dumps({"source": source(), "discs": catalog}, indent=2) + "\n")
     total = sum(d["bytes"] for d in catalog)
     print(f"site: {len(catalog)} discs, {total / 1e6:.0f} MB of menus, in {os.path.relpath(out)}", file=sys.stderr)
 

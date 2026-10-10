@@ -158,7 +158,7 @@
 <script type="module">
 import { createPlayer, KEYS } from "./player.js";
 import { discMarkup } from "./disc.js";
-import { aurora, light } from "./chrome.js";
+import { aurora, light, licenceLink } from "./chrome.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -193,7 +193,7 @@ function label() {
     ${by || tag ? `<p class="byline">${by ? `${by} ` : ""}${tag}</p>` : ""}
     <p>${esc(disc.blurb)}</p>
     ${KEYS_HELP}
-    ${local ? "" : `<p class="small">${esc(disc.license)} · <a href="${esc(disc.source)}" rel="noopener">Disc image</a> ·
+    ${local ? "" : `<p class="small">${esc(disc.credit)} · ${licenceLink(disc.license)} · <a href="${esc(disc.source)}" rel="noopener">Disc image</a> ·
       <a href="harness.html?bundle=${encodeURIComponent(disc.bundle)}">Test harness</a></p>`}`;
   $("where").textContent = disc.title;
 }

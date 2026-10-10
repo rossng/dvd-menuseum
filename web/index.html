@@ -126,8 +126,8 @@ const PLAY = `<svg viewBox="0 0 10 10"><path d="M2.5 1.2 9 5 2.5 8.8z"/></svg>`;
 
 aurora();
 light($("shelf"));
-const { discs } = await (await fetch("catalog.json")).json();
-licences($("licences"), discs);
+const { discs, source } = await (await fetch("catalog.json")).json();
+licences($("licences"), discs, source);
 const shelf = $("shelf");
 
 // Ring geometry: discs sit edge to edge, plus a gap, around a circle.
